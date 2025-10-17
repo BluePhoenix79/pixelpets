@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Virtual Pet Manager</title>
+    <meta name="description" content="Virtual Pet Manager"/>
+</head>
+<body>
+    <header class="title">
+        <h1>Virtual Pet Manager</h1>
+    </header>
+
+    <main>
+        <!-- Controls -->
+        <section id="controls" aria-label="Pet controls">
+            <form id="new-pet-form" autocomplete="off">
+                <label for="pet-name">Pet Name</label>
+                <input id="pet-name" name="name" type="text" required placeholder="Enter Pet Name"/>
+                <label for="pet-species">Species</label>
+                <select id="pet-species" name="species">
+                    <option value="dog">Dog</option>
+                    <option value="cat">Cat</option>
+                    <option value="dragon">Mouse</option>
+                </select>
+                <br>
+                <button id="creation" type="submit">Create Pet</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="main.js" defer></script>
+</body>
+</html>
