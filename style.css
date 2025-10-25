@@ -237,7 +237,7 @@ main{
     transform: translateY(-1px);
 }
 
-#creation{
+#button{
     margin-top: 18px;
     padding: 12px 18px;
     border-radius: 12px;
@@ -252,12 +252,12 @@ main{
     will-change: transform;
 }
 
-#creation:hover{
+#button:hover{
     transform: translateY(-6px) scale(1.01);
     filter: brightness(1.03);
 }
 
-#creation:active{
+#button:active{
     transform: translateY(-2px);
     box-shadow: var(--shadow-2);
 }
