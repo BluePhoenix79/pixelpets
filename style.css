@@ -300,3 +300,107 @@ main{
 button:focus, input:focus, select:focus{
     box-shadow: 0 0 0 4px rgba(31,96,196,0.12);
 }
+
+#user-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px 24px;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    box-shadow: var(--shadow-2);
+    margin-top: 16px;
+}
+
+.balance-display {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--fbla-blue-900);
+}
+
+#balance-amount {
+    color: var(--fbla-gold);
+}
+
+.logout-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(11,61,145,0.1);
+    color: var(--fbla-blue-900);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 180ms ease;
+}
+
+.logout-btn:hover {
+    background: rgba(11,61,145,0.2);
+    transform: translateY(-2px);
+}
+
+#pet-list {
+    margin-top: 32px;
+}
+
+#pet-list h2 {
+    color: var(--fbla-blue-900);
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+}
+
+#pets-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.pet-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.99));
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow-2);
+    border: 1px solid rgba(11,61,145,0.08);
+    transition: all 200ms ease;
+}
+
+.pet-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-1);
+}
+
+.pet-card h3 {
+    margin: 0 0 8px 0;
+    color: var(--fbla-blue-900);
+    font-size: 1.3rem;
+}
+
+.pet-species {
+    color: var(--muted-gray);
+    font-size: 0.9rem;
+    margin: 8px 0;
+}
+
+.care-btn {
+    margin-top: 12px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: white;
+    background: linear-gradient(90deg, var(--fbla-blue-600), var(--fbla-blue-900));
+    box-shadow: 0 4px 12px rgba(31,96,196,0.18);
+    transition: all 140ms ease;
+}
+
+.care-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}

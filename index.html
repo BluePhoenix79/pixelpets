@@ -11,13 +11,20 @@
     <header class="title">
         <h1>Virtual Pet Manager</h1>
         <div class="pet-icons">
-        <span class="pet-icon">🐶</span>
-        <span class="pet-icon">🐱</span>
-        <span class="pet-icon">🐦</span>
-        <span class="pet-icon">🐠</span>
-        <span class="pet-icon">🐰</span>
-</div>
+            <span class="pet-icon">🐶</span>
+            <span class="pet-icon">🐱</span>
+            <span class="pet-icon">🐦</span>
+            <span class="pet-icon">🐠</span>
+            <span class="pet-icon">🐰</span>
+        </div>
     </header>
+
+    <div id="user-info" style="display: none;">
+        <div class="balance-display">
+            Balance: <span id="balance-amount">$0</span>
+        </div>
+        <button id="logout-btn" class="logout-btn">Logout</button>
+    </div>
 
     <main>
         <section id="controls" aria-label="Pet controls">
@@ -25,8 +32,8 @@
                 <label for="pet-name">Pet Name</label>
                 <input id="pet-name" name="name" type="text" required placeholder="Enter Pet Name"/>
                 <label for="pet-species">Species</label>
-                <select id="pet-species" name="species">
-                    <option></option>
+                <select id="pet-species" name="species" required>
+                    <option value="">Select a species</option>
                     <option value="dog">Dog</option>
                     <option value="cat">Cat</option>
                     <option value="bird">Bird</option>
@@ -36,9 +43,14 @@
                 <br>
                 <button id="button" type="submit">Create Pet</button>
             </form>
+
+            <div id="pet-list" style="display: none;">
+                <h2>Your Pets</h2>
+                <div id="pets-container"></div>
+            </div>
         </section>
     </main>
 
-    <script src="main.js"></script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>

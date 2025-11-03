@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="pet.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Care for Pet - Virtual Pet Manager</title>
+</head>
+<body>
+    <header class="title">
+        <h1>Virtual Pet Manager</h1>
+    </header>
+
+    <div id="user-info" style="display: none;">
+        <div class="balance-display">
+            Balance: <span id="balance-amount">$0</span>
+        </div>
+        <button id="back-btn" class="back-btn" onclick="window.location.href='index.html'">Back to Home</button>
+    </div>
+
+    <main class="pet-care-main">
+        <div id="pet-display" class="pet-display">
+            <div class="pet-avatar">
+                <div id="pet-emoji" class="pet-emoji">🐶</div>
+                <div id="pet-mood" class="pet-mood">😊</div>
+            </div>
+            <h2 id="pet-name">Loading...</h2>
+            <p id="pet-status" class="pet-status">Happy and healthy!</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🍖</div>
+                <div class="stat-info">
+                    <label>Hunger</label>
+                    <div class="stat-bar">
+                        <div id="hunger-bar" class="stat-fill" style="width: 50%"></div>
+                    </div>
+                    <span id="hunger-value">50/100</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">😊</div>
+                <div class="stat-info">
+                    <label>Happiness</label>
+                    <div class="stat-bar">
+                        <div id="happiness-bar" class="stat-fill" style="width: 70%"></div>
+                    </div>
+                    <span id="happiness-value">70/100</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">⚡</div>
+                <div class="stat-info">
+                    <label>Energy</label>
+                    <div class="stat-bar">
+                        <div id="energy-bar" class="stat-fill" style="width: 80%"></div>
+                    </div>
+                    <span id="energy-value">80/100</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">✨</div>
+                <div class="stat-info">
+                    <label>Cleanliness</label>
+                    <div class="stat-bar">
+                        <div id="cleanliness-bar" class="stat-fill" style="width: 100%"></div>
+                    </div>
+                    <span id="cleanliness-value">100/100</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">💚</div>
+                <div class="stat-info">
+                    <label>Health</label>
+                    <div class="stat-bar">
+                        <div id="health-bar" class="stat-fill" style="width: 100%"></div>
+                    </div>
+                    <span id="health-value">100/100</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions-section">
+            <h3>Care Actions</h3>
+            <div class="actions-grid">
+                <button class="action-btn" data-action="feed" data-cost="10">
+                    <span class="action-icon">🍖</span>
+                    <span class="action-name">Feed</span>
+                    <span class="action-cost">$10</span>
+                </button>
+                <button class="action-btn" data-action="play" data-cost="5">
+                    <span class="action-icon">🎾</span>
+                    <span class="action-name">Play</span>
+                    <span class="action-cost">$5</span>
+                </button>
+                <button class="action-btn" data-action="clean" data-cost="8">
+                    <span class="action-icon">🛁</span>
+                    <span class="action-name">Clean</span>
+                    <span class="action-cost">$8</span>
+                </button>
+                <button class="action-btn" data-action="rest" data-cost="0">
+                    <span class="action-icon">😴</span>
+                    <span class="action-name">Rest</span>
+                    <span class="action-cost">Free</span>
+                </button>
+                <button class="action-btn" data-action="vet" data-cost="50">
+                    <span class="action-icon">🏥</span>
+                    <span class="action-name">Vet Visit</span>
+                    <span class="action-cost">$50</span>
+                </button>
+                <button class="action-btn" data-action="toy" data-cost="25">
+                    <span class="action-icon">🧸</span>
+                    <span class="action-name">Buy Toy</span>
+                    <span class="action-cost">$25</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="tabs-section">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="expenses">Expenses</button>
+                <button class="tab-button" data-tab="tasks">Earn Money</button>
+            </div>
+
+            <div id="expenses-tab" class="tab-content active">
+                <h3>Recent Expenses</h3>
+                <div id="expenses-list" class="expenses-list">
+                    <p class="no-data">No expenses yet</p>
+                </div>
+            </div>
+
+            <div id="tasks-tab" class="tab-content">
+                <h3>Complete Tasks to Earn Money</h3>
+                <button id="generate-tasks-btn" class="generate-btn">Generate Daily Tasks</button>
+                <div id="tasks-list" class="tasks-list">
+                    <p class="no-data">Click the button to generate tasks</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="pet.js"></script>
+</body>
+</html>

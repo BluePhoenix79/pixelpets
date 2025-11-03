@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="auth.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Login - Virtual Pet Manager</title>
+</head>
+<body>
+    <header class="title">
+        <h1>Virtual Pet Manager</h1>
+        <div class="pet-icons">
+            <span class="pet-icon">🐶</span>
+            <span class="pet-icon">🐱</span>
+            <span class="pet-icon">🐦</span>
+            <span class="pet-icon">🐠</span>
+            <span class="pet-icon">🐰</span>
+        </div>
+    </header>
+
+    <main>
+        <section id="controls" aria-label="Authentication">
+            <div id="auth-tabs">
+                <button class="tab-btn active" data-tab="login">Login</button>
+                <button class="tab-btn" data-tab="signup">Sign Up</button>
+            </div>
+
+            <form id="login-form" class="auth-form">
+                <label for="login-email">Email</label>
+                <input id="login-email" type="email" required placeholder="Enter your email"/>
+
+                <label for="login-password">Password</label>
+                <input id="login-password" type="password" required placeholder="Enter your password"/>
+
+                <button type="submit">Login</button>
+                <div id="login-message" class="message"></div>
+            </form>
+
+            <form id="signup-form" class="auth-form" style="display: none;">
+                <label for="signup-email">Email</label>
+                <input id="signup-email" type="email" required placeholder="Enter your email"/>
+
+                <label for="signup-password">Password</label>
+                <input id="signup-password" type="password" required placeholder="Create a password (min 6 characters)"/>
+
+                <button type="submit">Create Account</button>
+                <div id="signup-message" class="message"></div>
+            </form>
+        </section>
+    </main>
+
+    <script type="module" src="auth.js"></script>
+</body>
+</html>
