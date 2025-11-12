@@ -1,8 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="pet.css">
+        <script>
+            (function(){
+                try{
+                    const theme = localStorage.getItem('theme-preference') || 'system';
+                    if (theme === 'system') {
+                        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+                    } else {
+                        document.documentElement.setAttribute('data-theme', theme);
+                    }
+                }catch(e){}
+            })();
+        </script>
+        <link rel="stylesheet" href="theme.css">
+        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="pet.css">
+    <!-- pet.html
+         Pet care UI used by `pet.js`. Elements with IDs like:
+         - pet-emoji, pet-name, pet-status: display current pet
+         - hunger-bar, happiness-bar, energy-bar, cleanliness-bar, health-bar: stat bars
+         - action-btn elements: trigger actions (data-action, data-cost)
+    -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>Care for Pet - Virtual Pet Manager</title>
@@ -12,11 +32,17 @@
         <h1>Virtual Pet Manager</h1>
     </header>
 
+    <!-- Achievement popup container (popups injected here) -->
+    <div id="achievement-popup-container" aria-live="polite"></div>
+
     <div id="user-info" style="display: none;">
         <div class="balance-display">
             Balance: <span id="balance-amount">$0</span>
         </div>
-        <button id="back-btn" class="back-btn" onclick="window.location.href='index.html'">Back to Home</button>
+        <div class="nav-buttons">
+            <button id="settings-btn" class="nav-btn" onclick="window.location.href='settings.html'">⚙️ Settings</button>
+            <button id="back-btn" class="back-btn" onclick="window.location.href='index.html'">Back to Home</button>
+        </div>
     </div>
 
     <main class="pet-care-main">
@@ -88,44 +114,45 @@
 
         <div class="actions-section">
             <h3>Care Actions</h3>
-            <div class="actions-grid">
-                <button class="action-btn" data-action="feed" data-cost="10">
-                    <span class="action-icon">🍖</span>
-                    <span class="action-name">Feed</span>
-                    <span class="action-cost">$10</span>
-                </button>
-                <button class="action-btn" data-action="play" data-cost="5">
-                    <span class="action-icon">🎾</span>
-                    <span class="action-name">Play</span>
-                    <span class="action-cost">$5</span>
-                </button>
-                <button class="action-btn" data-action="clean" data-cost="8">
-                    <span class="action-icon">🛁</span>
-                    <span class="action-name">Clean</span>
-                    <span class="action-cost">$8</span>
-                </button>
-                <button class="action-btn" data-action="rest" data-cost="0">
-                    <span class="action-icon">😴</span>
-                    <span class="action-name">Rest</span>
-                    <span class="action-cost">Free</span>
-                </button>
-                <button class="action-btn" data-action="vet" data-cost="50">
-                    <span class="action-icon">🏥</span>
-                    <span class="action-name">Vet Visit</span>
-                    <span class="action-cost">$50</span>
-                </button>
-                <button class="action-btn" data-action="toy" data-cost="25">
-                    <span class="action-icon">🧸</span>
-                    <span class="action-name">Buy Toy</span>
-                    <span class="action-cost">$25</span>
-                </button>
-            </div>
+<div class="actions-grid">
+                    <button class="action-btn" data-action="feed" data-cost="10">
+                        <span class="action-icon">🍖</span>
+                        <span class="action-name">Feed</span>
+                        <span class="action-cost">$10</span>
+                    </button>
+                    <button class="action-btn" data-action="play" data-cost="5">
+                        <span class="action-icon">🎾</span>
+                        <span class="action-name">Play</span>
+                        <span class="action-cost">$5</span>
+                    </button>
+                    <button class="action-btn" data-action="clean" data-cost="8">
+                        <span class="action-icon">🧼</span>
+                        <span class="action-name">Clean</span>
+                        <span class="action-cost">$8</span>
+                    </button>
+                    <button class="action-btn" data-action="rest" data-cost="0">
+                        <span class="action-icon">😴</span>
+                        <span class="action-name">Rest</span>
+                        <span class="action-cost">Free</span>
+                    </button>
+                    <button class="action-btn" data-action="vet" data-cost="50">
+                        <span class="action-icon">🏥</span>
+                        <span class="action-name">Vet</span>
+                        <span class="action-cost">$50</span>
+                    </button>
+                    <button class="action-btn" data-action="toy" data-cost="25">
+                        <span class="action-icon">🧸</span>
+                        <span class="action-name">Buy Toy</span>
+                        <span class="action-cost">$25</span>
+                    </button>
+                </div>
         </div>
 
         <div class="tabs-section">
             <div class="tab-buttons">
                 <button class="tab-button active" data-tab="expenses">Expenses</button>
                 <button class="tab-button" data-tab="tasks">Earn Money</button>
+                <button class="tab-button" data-tab="achievements">Achievements</button>
             </div>
 
             <div id="expenses-tab" class="tab-content active">
@@ -140,6 +167,13 @@
                 <button id="generate-tasks-btn" class="generate-btn">Generate Daily Tasks</button>
                 <div id="tasks-list" class="tasks-list">
                     <p class="no-data">Click the button to generate tasks</p>
+                </div>
+            </div>
+
+            <div id="achievements-tab" class="tab-content">
+                <h3>Achievements</h3>
+                <div id="achievements-list" class="achievements-list">
+                    <div class="achievement-grid"></div>
                 </div>
             </div>
         </div>

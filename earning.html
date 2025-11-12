@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earning</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="earning.css">
+</head>
+<body>
+    <header class="title">
+        <h1>Earning</h1>
+    </header>
+
+    <main>
+        <section id="earning-container">
+            <div class="topic-selection-card">
+                <h2>Choose a Topic</h2>
+                <div class="form-group">
+                    <label for="topic-select">Topic</label>
+                    <select id="topic-select">
+                        <option value="math">Math</option>
+                        <option value="science">Science</option>
+                        <option value="history">History</option>
+                    </select>
+                </div>
+                <button id="start-quiz-btn" class="btn">Start Quiz</button>
+            </div>
+
+            <div class="quiz-card" style="display: none;">
+                <h2 id="question"></h2>
+                <div id="answers-container"></div>
+                <button id="next-question-btn" class="btn" style="display: none;">Next Question</button>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="earning.js"></script>
+</body>
+</html>

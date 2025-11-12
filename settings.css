@@ -1,0 +1,54 @@
+.settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 600px;
+}
+
+.setting-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.99));
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow-1);
+    border: 1px solid rgba(11,61,145,0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.setting-card h2 {
+    color: var(--fbla-blue-900);
+    margin: 0 0 20px;
+    font-size: 1.25rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    color: var(--fbla-blue-900);
+    font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(15,23,42,0.08);
+    background: linear-gradient(180deg, #fff, #fbfdff);
+    font-size: 0.95rem;
+    color: #07203a;
+    transition: box-shadow 180ms ease, border-color 180ms ease, transform 150ms ease;
+}
+
+.form-group input:disabled {
+    background: #f1f5f9;
+    cursor: not-allowed;
+}
