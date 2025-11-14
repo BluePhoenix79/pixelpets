@@ -123,6 +123,22 @@
     transform: translateY(-1px);
 }
 
+.auth-form input.error {
+    border-color: #e2e8f0;
+    border-width: 2px;
+    background-color: #fff;
+}
+
+/* Keep focus state normal even with error class */
+.auth-form input.error:focus {
+    border-color: var(--fbla-blue-600);
+    box-shadow: 0 6px 18px rgba(31,96,196,0.12);
+}
+
+.form-group.has-error {
+    position: relative;
+}
+
 .auth-form button[type="submit"] {
     width: 100%;
     margin-top: 20px;
@@ -151,27 +167,46 @@
 
 /* Message styles for feedback */
 .message {
-    margin-top: 16px;
-    padding: 12px 16px;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    text-align: center;
+    margin-top: 8px;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.9rem;
+    text-align: left;
     display: none;
     font-weight: 500;
+    animation: slideIn 0.3s ease;
 }
 
+/* Smooth slide-in animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Error message - simple red text below input */
 .message.error {
-    background: #fee;
-    color: #c00;
-    border: 1px solid #fcc;
+    background: transparent;
+    color: #dc2626;
+    border: none;
     display: block;
 }
 
+/* Success message - green box */
 .message.success {
-    background: #efe;
-    color: #070;
-    border: 1px solid #cfc;
+    background: transparent;
+    color: #16a34a;
+    border: none;
     display: block;
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: #dcfce7;
+    border-radius: 10px;
 }
 
 .auth-form label {
@@ -203,5 +238,10 @@
     .auth-form button[type="submit"] {
         padding: 10px 16px;
         font-size: 0.95rem;
+    }
+
+    .message {
+        font-size: 0.85rem;
+        padding: 10px 12px;
     }
 }

@@ -9,16 +9,18 @@
 */
 import { supabase } from './supabase.js';
 
+window.location.href = 'home.html';
+
 // Track the currently signed-in user (populated after auth check)
 let currentUser = null;
 
 async function checkAuth() {
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-        window.location.href = 'auth.html';
-        return;
-    }
+    //if (!user) {
+        //window.location.href = 'auth.html';
+        //return;
+    //}
 
     // Save the user object and show the user info area
     currentUser = user;
