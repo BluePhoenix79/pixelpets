@@ -25,11 +25,11 @@
     -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Care for Pet - Virtual Pet Manager</title>
+    <title>Care for Pet - PixelPets</title>
 </head>
 <body>
     <header class="title">
-        <h1>Virtual Pet Manager</h1>
+        <h1>PixelPets</h1>
     </header>
 
     <!-- Achievement popup container (popups injected here) -->
@@ -39,9 +39,10 @@
         <div class="balance-display">
             Balance: <span id="balance-amount">$0</span>
         </div>
-        <div class="nav-buttons">
-            <button id="settings-btn" class="nav-btn" onclick="window.location.href='settings.html'">⚙️ Settings</button>
-            <button id="back-btn" class="back-btn" onclick="window.location.href='index.html'">Back to Home</button>
+        <div class="user-bar-buttons">
+            <button id="back-btn" class="user-bar-btn">Home</button>
+            <button id="settings-btn" class="user-bar-btn">Settings</button>
+            <button id="logout-btn" class="user-bar-btn">Logout</button>
         </div>
     </div>
 
@@ -180,5 +181,20 @@
     </main>
 
     <script type="module" src="pet.js"></script>
+
+    <!-- FBLA Question Modal -->
+    <div id="task-question-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span id="close-question-modal" class="close-btn">&times;</span>
+            <h3>FBLA Knowledge Check!</h3>
+            <p>Answer correctly to claim your reward.</p>
+            <div id="question-area">
+                <p id="question-text"></p>
+                <div id="answer-options"></div>
+                <button id="submit-answer-btn" class="user-bar-btn">Submit Answer</button>
+                <p id="question-result"></p>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

@@ -4,20 +4,55 @@
     gap: 24px;
     width: 100%;
     max-width: 600px;
+    margin: 0 auto;
 }
 
 .setting-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.99));
     border-radius: var(--radius);
     padding: 24px;
     box-shadow: var(--shadow-1);
     border: 1px solid rgba(11,61,145,0.08);
     position: relative;
     overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.setting-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    var(--fbla-blue-900),
+    var(--fbla-blue-600),
+    var(--fbla-gold),
+    var(--fbla-blue-600),
+    var(--fbla-blue-900)
+  );
+  background-size: 400% 400%;
+  border-radius: var(--radius);
+  opacity: 0.1;
+  z-index: -1;
+  transition: opacity 0.5s ease;
+  filter: blur(10px);
+  animation: holographic-shift 8s ease-in-out infinite;
+}
+
+.setting-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(31,96,196,0.25), 0 0 60px rgba(11,61,145,0.12);
+}
+
+.setting-card:hover::before {
+  opacity: 0.3;
+  filter: blur(8px);
 }
 
 .setting-card h2 {
-    color: var(--fbla-blue-900);
+    color: var(--text-primary);
     margin: 0 0 20px;
     font-size: 1.25rem;
 }
@@ -32,7 +67,7 @@
 .form-group label {
     display: block;
     font-weight: 600;
-    color: var(--fbla-blue-900);
+    color: var(--text-primary);
     font-size: 0.95rem;
 }
 
@@ -41,14 +76,85 @@
     width: 100%;
     padding: 12px 14px;
     border-radius: 10px;
-    border: 1px solid rgba(15,23,42,0.08);
-    background: linear-gradient(180deg, #fff, #fbfdff);
+    border: 1px solid var(--border-color);
+    background: var(--surface);
     font-size: 0.95rem;
-    color: #07203a;
+    color: var(--text-secondary);
     transition: box-shadow 180ms ease, border-color 180ms ease, transform 150ms ease;
 }
 
 .form-group input:disabled {
-    background: #f1f5f9;
+    background: var(--surface-medium);
     cursor: not-allowed;
+    opacity: 0.7;
 }
+
+.input-with-button {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.input-with-button input {
+    flex-grow: 1;
+}
+
+.inline-btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(90deg, var(--fbla-blue-600), var(--fbla-blue-900));
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 180ms ease;
+    flex-shrink: 0;
+}
+
+.inline-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+#update-password-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 1rem;
+    color: white;
+    background: linear-gradient(90deg, var(--fbla-blue-600), var(--fbla-blue-900));
+    box-shadow: 0 4px 12px rgba(31,96,196,0.18);
+    transition: all 140ms ease;
+}
+
+#update-password-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}
+
+#back-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(11,61,145,0.06);
+    color: var(--fbla-blue-900);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#back-btn:hover {
+    background: rgba(11,61,145,0.12);
+    transform: translateY(-2px);
+}
+
+#user-info {
+    justify-content: center;
+}
+
