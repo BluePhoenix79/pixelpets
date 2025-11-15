@@ -32,7 +32,7 @@
 
     <div id="user-info">
         <div class="user-bar-buttons">
-            <button id="back-btn" class="user-bar-btn">Home</button>
+            <button id="back-btn" class="user-bar-btn" onclick="window.location.href='index.html'">Home</button>
             <button id="logout-btn" class="user-bar-btn">Logout</button>
         </div>
     </div>
@@ -40,6 +40,12 @@
     <main>
         <div id="settings-container" class="settings-container">
             <div id="message-area" class="message" style="display: none;"></div>
+            <div class="setting-card">
+                <h2>Your Pets</h2>
+                <div id="pets-management-container">
+                    <p style="text-align: center; color: var(--text-muted);">Loading...</p>
+                </div>
+            </div>
             <div class="setting-card">
                 <h2>Account</h2>
                 <div class="form-group">
@@ -53,9 +59,7 @@
                         <button id="edit-username-btn" class="inline-btn">Edit</button>
                     </div>
                 </div>
-                <button id="logout-btn" class="logout-btn">Logout</button>
             </div>
-
             <div class="setting-card">
                 <h2>Change Password</h2>
                 <form id="password-form">

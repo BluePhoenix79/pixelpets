@@ -51,13 +51,11 @@ loginForm.addEventListener('submit', async (e) => {
     } else {
         loginMessage.textContent = 'Login successful!';
         loginMessage.className = 'message success';
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 500);
+        window.location.href = 'index.html';
     }
 });
 
-// In auth.js - signup form handler
+// Fixed signup form handler - removed finance insert
 signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     signupMessage.className = 'message';
@@ -72,41 +70,20 @@ signupForm.addEventListener('submit', async (e) => {
         return;
     }
 
-    // Create the user in Supabase Auth with email confirmation disabled
+    // Create the user in Supabase Auth
     const { data, error } = await supabase.auth.signUp({
         email,
-        password,
-        options: {
-            emailRedirectTo: window.location.origin,
-            data: {
-                email_confirmed: true
-            }
-        }
+        password
     });
 
     if (error) {
         signupMessage.textContent = error.message;
         signupMessage.className = 'message error';
     } else {
-        // Initialize user's in-game finances with LOWER starting balance
-        const { error: financeError } = await supabase.from('user_finances').insert({
-            user_id: data.user.id,
-            balance: 10, // Changed from 20 to 10
-            total_earned: 10, // Changed from 20 to 10
-            total_spent: 0
-        });
-
-        if (financeError) {
-            signupMessage.textContent = 'Error setting up your account finances. Please try again.';
-            signupMessage.className = 'message error';
-            return;
-        }
-
+        // The user_finances row will be created automatically by the database trigger
         signupMessage.textContent = 'Account created! Logging you in...';
         signupMessage.className = 'message success';
-        setTimeout(() => {
-            window.location.href = 'index.html';
-        }, 1000);
+        window.location.href = 'index.html';
     }
 });
 

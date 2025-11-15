@@ -12,6 +12,7 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    line-height: 1.6;
 }
 
 header {
@@ -69,15 +70,12 @@ html {
 main {
     flex: 1;
     overflow-y: auto;
-    scroll-snap-type: y mandatory;
 }
 
 .scroll-section {
-    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    scroll-snap-align: start;
     padding: 3rem 2rem;
 }
 
@@ -296,15 +294,5 @@ footer {
 
     .scroll-section {
         min-height: auto;
-    }
-
-    /* Fade out effect for buttons */
-    .fade-out {
-        animation: fadeOut 0.5s forwards;
-    }
-
-    @keyframes fadeOut {
-        from { opacity: 1; transform: translateY(0); }
-        to { opacity: 0; transform: translateY(-10px); }
     }
 }

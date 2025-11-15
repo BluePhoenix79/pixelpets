@@ -661,6 +661,32 @@
     font-size: 1.5rem;
 }
 
+.charts-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+
+.chart-item {
+    flex: 1 1 300px; /* Allow charts to grow and shrink, with a base of 300px */
+    max-width: 45%; /* Limit width to allow two charts per row */
+    background: var(--surface-medium);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: var(--shadow-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .chart-item {
+        max-width: 100%; /* Stack charts on smaller screens */
+    }
+}
+
 #answer-options {
     display: flex;
     flex-direction: column;
@@ -717,4 +743,418 @@
     margin-top: 16px;
     text-align: center;
     font-size: 1.1rem;
+}
+
+/* Enhanced Budget Tab Styles - Matching Overall Design */
+
+/* Budget Tab Container */
+#budget-tab {
+    padding: 0;
+}
+
+#budget-tab h3 {
+    color: var(--text-primary);
+    margin: 0 0 20px;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+/* Budget Summary Section */
+.budget-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.budget-stat-card {
+    border-radius: 12px;
+    padding: 24px;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    box-shadow: var(--shadow-2);
+    border: 1px solid var(--border-color);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    position: relative;
+    overflow: hidden;
+    background: var(--surface, #fff);
+}
+
+.budget-stat-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(
+        45deg,
+        var(--fbla-blue-900),
+        var(--fbla-blue-600),
+        var(--fbla-gold),
+        var(--fbla-blue-600),
+        var(--fbla-blue-900)
+    );
+    background-size: 400% 400%;
+    border-radius: 12px;
+    opacity: 0.1;
+    z-index: -1;
+    transition: opacity 0.5s ease;
+    filter: blur(10px);
+    animation: holographic-shift 8s ease-in-out infinite;
+}
+
+.budget-stat-card:hover::before {
+    opacity: 0.3;
+    filter: blur(8px);
+}
+
+.budget-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-1);
+}
+
+.budget-stat-icon {
+    font-size: 2.5rem;
+}
+
+.budget-stat-info {
+    flex: 1;
+}
+
+.budget-stat-info label {
+    display: block;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.budget-stat-info .amount {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+/* Savings Goal Section - Matches stat card style */
+.savings-goal-card {
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: var(--shadow-2);
+    border: 1px solid var(--border-color);
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface, #fff);
+}
+
+.savings-goal-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(
+        45deg,
+        var(--fbla-blue-900),
+        var(--fbla-blue-600),
+        var(--fbla-gold),
+        var(--fbla-blue-600),
+        var(--fbla-blue-900)
+    );
+    background-size: 400% 400%;
+    border-radius: 12px;
+    opacity: 0.1;
+    z-index: -1;
+    transition: opacity 0.5s ease;
+    filter: blur(10px);
+    animation: holographic-shift 8s ease-in-out infinite;
+}
+
+.savings-goal-card:hover::before {
+    opacity: 0.3;
+    filter: blur(8px);
+}
+
+.savings-goal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.savings-goal-header h4 {
+    font-size: 1.4rem;
+    color: var(--text-primary);
+    margin: 0;
+    font-weight: 700;
+}
+
+.savings-goal-icon {
+    font-size: 2rem;
+}
+
+#savings-goal-status {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+#savings-goal-progress {
+    margin-bottom: 12px;
+}
+
+#savings-goal-progress .stat-bar {
+    width: 100%;
+    height: 16px;
+    background: rgba(11,61,145,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+#savings-goal-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--fbla-blue-600), var(--fbla-gold));
+    border-radius: 8px;
+    transition: width 500ms ease;
+}
+
+#savings-goal-progress-value {
+    font-size: 1rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.savings-goal-input-group {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    margin-top: 16px;
+}
+
+#savings-goal-input {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: var(--surface, #fff);
+    color: var(--text-primary);
+    transition: border-color var(--transition-fast);
+}
+
+#savings-goal-input:focus {
+    outline: none;
+    border-color: var(--fbla-blue-600);
+}
+
+#set-savings-goal-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    background: linear-gradient(90deg, var(--fbla-blue-600), var(--fbla-blue-900));
+    color: white;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform var(--transition-fast), filter var(--transition-fast);
+    white-space: nowrap;
+}
+
+#set-savings-goal-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.05);
+}
+
+/* Charts Section */
+.charts-section {
+    margin-bottom: 28px;
+}
+
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0px;
+}
+
+.chart-card {
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: var(--shadow-2);
+    border: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+    background: var(--surface, #fff);
+    min-height: 400px;
+}
+
+.chart-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(
+        45deg,
+        var(--fbla-blue-900),
+        var(--fbla-blue-600),
+        var(--fbla-gold),
+        var(--fbla-blue-600),
+        var(--fbla-blue-900)
+    );
+    background-size: 400% 400%;
+    border-radius: 12px;
+    opacity: 0.1;
+    z-index: -1;
+    transition: opacity 0.5s ease;
+    filter: blur(10px);
+    animation: holographic-shift 8s ease-in-out infinite;
+}
+
+.chart-card:hover::before {
+    opacity: 0.3;
+    filter: blur(8px);
+}
+
+.chart-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-1);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.chart-card h4 {
+    color: var(--text-primary);
+    margin: 0 0 24px 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.chart-card canvas {
+    max-height: 350px;
+    width: 100% !important;
+    height: auto !important;
+}
+
+/* Expenses Section */
+.expenses-section h4 {
+    color: var(--text-primary);
+    margin: 0 0 20px 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Update expense items to match task style */
+.expense-item {
+    background: var(--surface-medium);
+    border-radius: 8px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    margin-bottom: 10px;
+    transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.expense-item:hover {
+    background: var(--surface-dark);
+    transform: translateX(4px);
+}
+
+.expense-info {
+    flex: 1;
+}
+
+.expense-name {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+    font-size: 1.05rem;
+}
+
+.expense-type {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.expense-amount {
+    font-weight: 800;
+    color: #dc2626;
+    font-size: 1.3rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .budget-summary {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    
+    .charts-container {
+        grid-template-columns: 1fr;
+        gap: 0px;
+    }
+    
+    .chart-card {
+        min-height: 350px;
+    }
+}
+
+@media (max-width: 640px) {
+    .budget-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .budget-stat-card {
+        padding: 20px;
+    }
+    
+    .budget-stat-info .amount {
+        font-size: 1.6rem;
+    }
+    
+    .savings-goal-card {
+        padding: 20px;
+    }
+    
+    .savings-goal-input-group {
+        flex-direction: column;
+    }
+    
+    #savings-goal-input,
+    #set-savings-goal-btn {
+        width: 100%;
+    }
+    
+    .chart-card {
+        padding: 20px;
+        min-height: 300px;
+    }
+    
+    .chart-card canvas {
+        max-height: 280px;
+    }
+    
+    .chart-card h4 {
+        font-size: 1.2rem;
+    }
+    
+    .expenses-section h4 {
+        font-size: 1.4rem;
+    }
+}
+
+@keyframes holographic-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
 }

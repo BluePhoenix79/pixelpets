@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
         <script>
             (function(){
                 try{
@@ -40,8 +41,8 @@
             Balance: <span id="balance-amount">$0</span>
         </div>
         <div class="user-bar-buttons">
-            <button id="back-btn" class="user-bar-btn">Home</button>
-            <button id="settings-btn" class="user-bar-btn">Settings</button>
+            <button id="back-btn" class="user-bar-btn" onclick="window.location.href='index.html'">Home</button>
+            <button id="settings-btn" class="user-bar-btn" onclick="window.location.href='settings.html'">Settings</button>
             <button id="logout-btn" class="user-bar-btn">Logout</button>
         </div>
     </div>
@@ -153,6 +154,7 @@
             <div class="tab-buttons">
                 <button class="tab-button active" data-tab="expenses">Expenses</button>
                 <button class="tab-button" data-tab="tasks">Earn Money</button>
+                <button class="tab-button" data-tab="budget">Budget</button>
                 <button class="tab-button" data-tab="achievements">Achievements</button>
             </div>
 
@@ -171,6 +173,36 @@
                 </div>
             </div>
 
+            <div id="budget-tab" class="tab-content">
+                <h3>Budgeting</h3>
+                <div class="charts-container">
+                    <div class="chart-item">
+                        <canvas id="spendingChart"></canvas>
+                    </div>
+                    <div class="chart-item">
+                        <canvas id="balanceHistoryChart"></canvas>
+                    </div>
+                </div>
+                <div id="total-spent-section">
+                    <h4>Total Spent</h4>
+                    <p id="total-spent-amount">$0.00</p>
+                </div>
+                <div id="savings-goal-section">
+                    <h4>Savings Goal</h4>
+                    <p id="savings-goal-status">No goal set.</p>
+                    <div id="savings-goal-progress" style="display: none;">
+                        <div class="stat-bar">
+                            <div id="savings-goal-progress-bar" class="stat-fill" style="width: 0%;"></div>
+                        </div>
+                        <span id="savings-goal-progress-value"></span>
+                    </div>
+                    <div id="set-savings-goal">
+                        <input type="number" id="savings-goal-input" placeholder="Enter goal amount">
+                        <button id="set-savings-goal-btn">Set Goal</button>
+                    </div>
+                </div>
+            </div>
+
             <div id="achievements-tab" class="tab-content">
                 <h3>Achievements</h3>
                 <div id="achievements-list" class="achievements-list">
@@ -181,7 +213,7 @@
     </main>
 
     <script type="module" src="pet.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- FBLA Question Modal -->
     <div id="task-question-modal" class="modal" style="display: none;">
         <div class="modal-content">

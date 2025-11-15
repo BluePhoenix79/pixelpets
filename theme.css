@@ -5,7 +5,7 @@
 
 :root {
     /* Default to light theme */
-    --bg-gradient: radial-gradient(ellipse at top left, #e0f0ff 0%, #f0f7ff 25%, #ffffff 50%, #f5f9ff 75%, #e8f2ff 100%);
+    --bg-gradient: radial-gradient(ellipse at top left, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
     --surface: #ffffff;
     --surface-transparent: rgba(255, 255, 255, 0.9);
     --surface-medium: #f1f5f9; /* slate-100 */

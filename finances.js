@@ -27,7 +27,7 @@ export async function increaseBalance(userId, amount) {
         return data.length > 0 ? data[0] : null;
     }
 
-    return data;
+    return data && data.length > 0 ? data[0] : null;
 }
 
 /**

@@ -22,7 +22,7 @@ html,body{
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
     background: var(--bg-gradient);
     background-attachment: fixed;
-    color: #0f172a;
+    color: var(--text-secondary);
     -webkit-font-smoothing:antialiased;
     -moz-osx-font-smoothing:grayscale;
     /* Allow scrolling on index page when content exceeds viewport */
@@ -334,8 +334,21 @@ button:focus, input:focus, select:focus{
 
 .user-bar-buttons {
     display: flex;
-    gap: 24px;
     align-items: center;
+    gap: 12px;
+    margin-left: auto;   /* pushes the buttons to the right side */
+}
+
+.user-bar-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: var(--surface-medium);
+    color: var(--text-primary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 180ms ease;
+    /* no flex-grow so buttons stay small */
 }
 
 .balance-display {
@@ -349,6 +362,7 @@ button:focus, input:focus, select:focus{
 }
 
 .user-bar-btn {
+    flex-grow: 1;
     padding: 8px 16px;
     border-radius: 8px;
     border: none;

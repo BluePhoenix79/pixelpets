@@ -16,13 +16,21 @@ let currentUser = null;
 // --- Core Functions ---
 
 async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-        window.location.href = 'auth.html';
-        return;
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error || !user) {
+            console.log('No user found, redirecting to home');
+            window.location.href = 'home.html';
+            return;
+        }
+        
+        currentUser = user;
+        populateUserInfo();
+    } catch (err) {
+        console.error('Auth check failed:', err);
+        window.location.href = 'home.html';
     }
-    currentUser = user;
-    populateUserInfo();
 }
 
 function populateUserInfo() {
@@ -53,7 +61,7 @@ function handleThemeChange() {
 
 async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = 'index.html';
+    window.location.href = 'home.html';
 }
 
 function handleEditUsernameClick() {
@@ -137,10 +145,75 @@ function setupEventListeners() {
     });
 }
 
+async function loadUserPets() {
+    const petsContainer = document.getElementById('pets-management-container');
+    if (!petsContainer) return; // If element doesn't exist, skip
+    
+    const { data: pets, error } = await supabase
+        .from('pets')
+        .select('*')
+        .eq('owner_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error loading pets:', error);
+        return;
+    }
+
+    if (!pets || pets.length === 0) {
+        petsContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 20px;">No pets yet</p>';
+        return;
+    }
+
+    petsContainer.innerHTML = pets.map(pet => `
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--surface-medium); border-radius: 8px; margin-bottom: 10px;">
+            <div>
+                <strong style="color: var(--text-primary);">${pet.name}</strong>
+                <span style="color: var(--text-muted); margin-left: 8px;">(${pet.species})</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button onclick="renamePet('${pet.id}', '${pet.name}')" style="padding: 6px 12px; background: var(--fbla-blue-600); color: white; border: none; border-radius: 6px; cursor: pointer;">Rename</button>
+                <button onclick="deletePet('${pet.id}', '${pet.name}')" style="padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer;">Delete</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.renamePet = async function(petId, currentName) {
+    const newName = prompt(`Enter new name for ${currentName}:`, currentName);
+    if (!newName || newName === currentName) return;
+    
+    const { error } = await supabase.from('pets').update({ name: newName }).eq('id', petId);
+    
+    if (error) {
+        alert('Error updating pet name: ' + error.message);
+    } else {
+        showMessage('Pet name updated!', 'success');
+        loadUserPets();
+    }
+};
+
+window.deletePet = async function(petId, petName) {
+    if (!confirm(`Delete ${petName}? This cannot be undone!`)) return;
+    if (!confirm(`Are you SURE? This will delete all data for ${petName}!`)) return;
+    
+    try {
+        await supabase.from('achievements').delete().eq('pet_id', petId);
+        await supabase.from('expenses').delete().eq('pet_id', petId);
+        await supabase.from('savings_goals').delete().eq('pet_id', petId);
+        await supabase.from('pets').delete().eq('id', petId);
+        
+        showMessage(`${petName} deleted`, 'success');
+        loadUserPets();
+    } catch (error) {
+        alert('Error deleting pet: ' + error.message);
+    }
+};
+
 // Run on page load
 (async () => {
     await checkAuth();
     loadTheme();
     setupEventListeners();
+    loadUserPets(); 
 })();
-

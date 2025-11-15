@@ -9,6 +9,34 @@ let petId = null;
 const shownAchievementIds = new Set();
 // Client-side state for tasks answered incorrectly in this session
 const incorrectTaskIds = new Set();
+let shownSavingsGoalPopup = false;
+let spendingChartInstance = null;
+let balanceHistoryChartInstance = null;
+
+function showSavingsGoalPopup() {
+    const popupContainer = document.getElementById('achievement-popup-container');
+    const popup = document.createElement('div');
+    popup.className = 'achievement-popup show';
+    popup.innerHTML = `
+        <div class="popup-header">
+            <span class="popup-icon">🎉</span>
+            <span>Goal Reached!</span>
+        </div>
+        <div class="popup-list">
+            <div class="popup-item">
+                <div class="popup-name">You've reached your savings goal!</div>
+            </div>
+        </div>
+        <button class="popup-close">&times;</button>
+    `;
+    popup.querySelector('.popup-close').addEventListener('click', () => {
+        popup.remove();
+    });
+    popupContainer.appendChild(popup);
+    setTimeout(() => {
+        popup.remove();
+    }, 5000);
+}
 
 // --- Utility Functions ---
 const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -64,6 +92,156 @@ const FBLA_QUESTIONS = [
         question: "Which of these is the last of the nine goals of FBLA-PBL?",
         options: ["Strengthen the confidence of students in themselves and their work.", "Facilitate the transition from school to work.", "Assist students in the establishment of occupational goals.", "Encourage scholarship and promote school loyalty."],
         answer: 1
+    },
+    {
+        question: "What is the FBLA-PBL motto?",
+        options: ["Service, Education, and Progress", "Preparing Leaders for the World of Business", "Education for Business, Business for Education", "Future Business Leaders of Tomorrow"],
+        answer: 0
+    },
+    {
+        question: "How many competitive events categories are there at the National Leadership Conference?",
+        options: ["3 categories", "4 categories", "5 categories", "6 categories"],
+        answer: 1
+    },
+    {
+        question: "What year was FBLA-PBL founded?",
+        options: ["1937", "1940", "1942", "1945"],
+        answer: 2
+    },
+    {
+        question: "Which colors represent FBLA-PBL?",
+        options: ["Red, White, and Blue", "Blue and Gold", "Navy Blue, Royal Blue, and Gold", "Silver and Blue"],
+        answer: 2
+    },
+    {
+        question: "What does BAA stand for in the FBLA division structure?",
+        options: ["Business Achievement Awards", "Business Administration Association", "Business Advisers of America", "Business Alumni Association"],
+        answer: 0
+    },
+    {
+        question: "How many FBLA-PBL goals are there in total?",
+        options: ["7 goals", "8 goals", "9 goals", "10 goals"],
+        answer: 2
+    },
+    {
+        question: "What is the official flower of FBLA-PBL?",
+        options: ["Red Rose", "Blue Rose", "Yellow Rose", "White Rose"],
+        answer: 1
+    },
+    {
+        question: "In Robert's Rules of Order, what vote is required to adopt the 'Previous Question' motion?",
+        options: ["Simple majority", "Two-thirds vote", "Three-fourths vote", "Unanimous consent"],
+        answer: 1
+    },
+    {
+        question: "Which national officer presides over meetings in the absence of the President?",
+        options: ["Secretary", "Vice President", "Treasurer", "Reporter"],
+        answer: 1
+    },
+    {
+        question: "What is the minimum GPA requirement to hold a national FBLA-PBL office?",
+        options: ["2.5", "3.0", "3.5", "3.75"],
+        answer: 1
+    },
+    {
+        question: "How many divisions does FBLA-PBL have?",
+        options: ["2 divisions", "3 divisions", "4 divisions", "5 divisions"],
+        answer: 2
+    },
+    {
+        question: "What does the FBLA Creed emphasize as essential for success?",
+        options: ["Competition and determination", "Education and hard work", "Networking and connections", "Innovation and creativity"],
+        answer: 1
+    },
+    {
+        question: "The American Enterprise Project is primarily focused on:",
+        options: ["Financial literacy education", "Free enterprise system education", "Leadership training", "Career development"],
+        answer: 1
+    },
+    {
+        question: "Which parliamentary motion requires a second?",
+        options: ["Point of Order", "Request for Information", "Main Motion", "Division of Assembly"],
+        answer: 2
+    },
+    {
+        question: "What is the maximum number of times a member can run for the same national officer position?",
+        options: ["Once", "Twice", "Three times", "No limit"],
+        answer: 1
+    },
+    {
+        question: "FBLA members who earn recognition through competitive events receive:",
+        options: ["Medals and ribbons", "Trophies and plaques", "Certificates and pins", "Scholarships only"],
+        answer: 1
+    },
+    {
+        question: "The March of Dimes is historically associated with FBLA as:",
+        options: ["The founding sponsor", "A national service partner", "The scholarship fund provider", "The competitive events sponsor"],
+        answer: 1
+    },
+    {
+        question: "In which month is FBLA Week typically celebrated?",
+        options: ["January", "February", "March", "April"],
+        answer: 1
+    },
+    {
+        question: "What is the primary purpose of the FBLA National Awards Program?",
+        options: ["Provide scholarships", "Recognize achievement and service", "Fund chapter activities", "Promote business careers"],
+        answer: 1
+    },
+    {
+        question: "The FBLA-PBL Professional Division is called:",
+        options: ["Professional Leadership", "Phi Beta Lambda (PBL)", "Business Professionals of America", "FBLA Alumni"],
+        answer: 1
+    },
+    {
+        question: "Which competitive event tests knowledge of FBLA-PBL specifically?",
+        options: ["Business Ethics", "FBLA Principles and Procedures", "Introduction to Business", "American Enterprise"],
+        answer: 1
+    },
+    {
+        question: "According to FBLA guidelines, how many members must a chapter have to be chartered?",
+        options: ["At least 5 members", "At least 10 members", "At least 15 members", "At least 20 members"],
+        answer: 0
+    },
+    {
+        question: "The FBLA-PBL mission statement emphasizes bringing what to students?",
+        options: ["Career opportunities", "Business and education together", "Leadership training exclusively", "Entrepreneurial skills"],
+        answer: 1
+    },
+    {
+        question: "What does 'aggressive business leadership' in the FBLA goals refer to?",
+        options: ["Competitive business tactics", "Assertive and proactive leadership", "Hostile takeover strategies", "Dominant market positioning"],
+        answer: 1
+    },
+    {
+        question: "The Institute for Leaders is an FBLA program designed for:",
+        options: ["New members only", "State officers", "National officer candidates", "All competitive event winners"],
+        answer: 1
+    },
+    {
+        question: "Which of the following is a National Fall Leadership Conference goal?",
+        options: ["Elect national officers", "Conduct competitive events", "Provide leadership training", "Award scholarships"],
+        answer: 2
+    },
+    {
+        question: "In parliamentary procedure, a motion to 'Lay on the Table' is used to:",
+        options: ["End debate immediately", "Postpone consideration temporarily", "Refer to a committee", "Close nominations"],
+        answer: 1
+    },
+    {
+        question: "The FBLA-PBL Professional Division serves which group?",
+        options: ["High school students", "Middle school students", "College/university students and alumni", "Business teachers only"],
+        answer: 2
+    },
+    {
+        question: "What is the deadline for National Awards Program submissions?",
+        options: ["December 1", "January 15", "March 1", "Varies by state"],
+        answer: 2
+    },
+    {
+        question: "Which FBLA publication is specifically for chapter advisers?",
+        options: ["Tomorrow's Business Leader", "The Professional Edge", "FBLA-PBL Adviser Hotline", "Business Education Forum"],
+        answer: 2
     }
 ];
 let currentTaskInfo = null; // To store task details while question is being answered
@@ -77,7 +255,9 @@ const submitAnswerBtn = document.getElementById('submit-answer-btn');
 const questionResult = document.getElementById('question-result');
 
 
-// Cost table used by the UI action buttons
+
+
+
 const COSTS = {
     feed: 10,
     play: 5,
@@ -138,7 +318,6 @@ const ACHIEVEMENTS = [
             const { data } = await supabase.from('user_finances').select('balance').eq('user_id', userId).maybeSingle();
             return data && data.balance >= 100;
         },
-        // best-effort progress: if balance not available, return 0
         progress: (pet, stats = {}) => {
             const bal = stats.balance || 0;
             return Math.min(100, (bal / 100) * 100);
@@ -286,7 +465,6 @@ async function checkAchievements() {
         total_spent: finances?.total_spent || 0
     };
 
-    // lightweight counts (may return null if DB doesn't support head/count the same way)
     try {
         const tasksRes = await supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('completed', true);
         stats.tasks_done = tasksRes.count || 0;
@@ -360,35 +538,68 @@ async function checkAchievements() {
 }
 
 async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser();
+    try {
+        console.log('=== STARTING checkAuth ===');
+        
+        // Show loading state
+        document.body.style.opacity = '0';
+        
+        // Read the pet id from the query string FIRST
+        const urlParams = new URLSearchParams(window.location.search);
+        petId = urlParams.get('id');
+        console.log('1. Pet ID from URL:', petId);
+        console.log('2. Full URL:', window.location.href);
+        
+        const { data: { user }, error } = await supabase.auth.getUser();
+        console.log('3. User check:', user ? 'User found' : 'No user', error);
 
-    if (!user) {
-        window.location.href = 'auth.html';
-        return;
+        if (error || !user) {
+            console.log('4. REDIRECTING: No user found');
+            await delay(300);
+            window.location.href = 'home.html';
+            return;
+        }
+
+        // set the current user and reveal header UI
+        currentUser = user;
+        console.log('5. Current user set:', currentUser.id);
+        
+        if (!petId) {
+            console.log('6. REDIRECTING: No pet ID in URL');
+            await delay(300);
+            window.location.href = 'index.html';
+            return;
+        }
+        
+        console.log('7. About to load pet data...');
+
+        // Ensure the user_finances row exists, then load pet data and finances
+        await Promise.all([
+            ensureFinance(currentUser.id),
+            loadPet(),
+            loadUserBalance(),
+            loadExpenses(),
+            loadTasks(),
+            loadAchievements(),
+            loadTotalSpent(),
+            loadSavingsGoal(),
+            delay(500) // Minimum loading time for smooth appearance
+        ]);
+        
+        console.log('8. All data loaded successfully');
+        document.getElementById('user-info').style.display = 'flex';
+
+        setupEventListeners();
+        startStatDecay();
+
+        // Fade in content
+        document.body.style.transition = 'opacity 0.5s ease-in-out';
+        document.body.style.opacity = '1';
+    } catch (err) {
+        console.error('9. ERROR in checkAuth:', err);
+        await delay(300);
+        window.location.href = 'home.html';
     }
-
-    // set the current user and reveal header UI
-    currentUser = user;
-    document.getElementById('user-info').style.display = 'flex';
-
-    // Read the pet id from the query string; redirect home if missing
-    const urlParams = new URLSearchParams(window.location.search);
-    petId = urlParams.get('id');
-
-    if (!petId) {
-        window.location.href = 'index.html';
-        return;
-    }
-
-    // Ensure the user_finances row exists, then load pet data and finances
-    await ensureFinance(currentUser.id);
-    await loadPet();
-    await loadUserBalance();
-    await loadExpenses();
-    await loadTasks();
-    setupEventListeners();
-    startStatDecay();
-    loadAchievements();
 }
 
 async function loadPet() {
@@ -409,6 +620,11 @@ async function loadPet() {
     }
 
     currentPet = pet;
+    console.log('Current pet loaded:', currentPet); // ADD THIS
+    
+    // Display current stats immediately
+    displayPet();
+    
     
     console.log('Pet loaded - Stats:', {
         hunger: currentPet.hunger,
@@ -451,16 +667,18 @@ async function applyTimedDecay() {
         energy: currentPet.energy
     });
 
-    // Only apply decay if at least 2 hours has passed
-    if (hoursPassed >= 2) {
-        const decayAmount = Math.floor(hoursPassed * 2);
+    // Only apply decay if at least 1 hour has passed
+    if (hoursPassed >= 1) {
+        // Much gentler decay - only 1 point per hour for main stats
+        const decayAmount = Math.floor(hoursPassed);
 
         currentPet.hunger = Math.max(0, currentPet.hunger - decayAmount);
         currentPet.happiness = Math.max(0, currentPet.happiness - Math.floor(decayAmount * 0.5));
         currentPet.cleanliness = Math.max(0, currentPet.cleanliness - Math.floor(decayAmount * 0.8));
 
-        if (currentPet.hunger < 30 || currentPet.cleanliness < 30) {
-            currentPet.health = Math.max(0, currentPet.health - Math.floor(decayAmount * 0.3));
+        // Only decay health if stats are critically low
+        if (currentPet.hunger < 20 || currentPet.cleanliness < 20) {
+            currentPet.health = Math.max(0, currentPet.health - Math.floor(decayAmount * 0.2));
         }
 
         // Persist the decayed stats back to the database
@@ -474,31 +692,31 @@ async function applyTimedDecay() {
             energy: currentPet.energy
         });
     } else {
-        console.log('No decay applied - less than 2 hours passed');
+        console.log('No decay applied - less than 1 hour passed');
     }
 }
 
 function startStatDecay() {
-    // Faster decay while actively viewing the pet (every 10 seconds instead of 30)
+    // Slower decay while actively viewing the pet (every 30 seconds instead of 10)
     setInterval(async () => {
-        // Decay hunger and cleanliness more noticeably
-        currentPet.hunger = Math.max(0, currentPet.hunger - 2);
-        currentPet.cleanliness = Math.max(0, currentPet.cleanliness - 2);
+        // Gentle decay
+        currentPet.hunger = Math.max(0, currentPet.hunger - 1);
+        currentPet.cleanliness = Math.max(0, currentPet.cleanliness - 1);
 
-        // Random happiness decay (more frequent)
-        if (Math.random() > 0.5) {
+        // Random happiness decay (less frequent)
+        if (Math.random() > 0.7) {
             currentPet.happiness = Math.max(0, currentPet.happiness - 1);
         }
 
-        // Health decay if stats are low
-        if (currentPet.hunger < 20 || currentPet.cleanliness < 20) {
-            currentPet.health = Math.max(0, currentPet.health - 2);
+        // Health decay only if stats are critically low
+        if (currentPet.hunger < 15 || currentPet.cleanliness < 15) {
+            currentPet.health = Math.max(0, currentPet.health - 1);
         }
 
         // Save changes periodically and update the UI
         await updatePetInDatabase();
         displayPet();
-    }, 10000); // 10 seconds for faster, harder gameplay
+    }, 30000); // 30 seconds for more balanced gameplay
 }
 
 function displayPet() {
@@ -649,16 +867,51 @@ async function loadUserBalance() {
     return 0;
 }
 
+async function loadExpenses() {
+    const { data: expenses, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('pet_id', petId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error loading expenses:', error);
+        return [];
+    }
+
+    return expenses || [];
+}
+
 function setupEventListeners() {
     document.getElementById('logout-btn').addEventListener('click', async () => {
+        // Fade out before redirect
+        document.body.style.transition = 'opacity 0.3s ease-out';
+        document.body.style.opacity = '0';
+        
+        await delay(300);
         await supabase.auth.signOut();
-        window.location.href = 'auth.html';
+        window.location.href = 'home.html';
     });
+    
     document.getElementById('settings-btn').addEventListener('click', () => {
-        window.location.href = 'settings.html';
+        // Fade out before redirect
+        document.body.style.transition = 'opacity 0.3s ease-out';
+        document.body.style.opacity = '0';
+        
+        setTimeout(() => {
+            window.location.href = '../settings/settings.html';
+        }, 300);
     });
+    
     document.getElementById('back-btn').addEventListener('click', () => {
-        window.location.href = 'index.html';
+        // Fade out before redirect
+        document.body.style.transition = 'opacity 0.3s ease-out';
+        document.body.style.opacity = '0';
+        
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 300);
     });
 
     document.querySelectorAll('.action-btn').forEach(btn => {
@@ -696,6 +949,12 @@ function switchTab(tabName) {
 
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
     document.getElementById(`${tabName}-tab`).classList.add('active');
+
+    if (tabName === 'budget') {
+        // Render charts when budget tab is active
+        loadExpenses().then(expenses => renderSpendingChart(expenses));
+        fetchBalanceHistory().then(history => renderBalanceHistoryChart(history));
+    }
 }
 
 async function performAction(action, cost) {
@@ -734,7 +993,7 @@ async function performAction(action, cost) {
         rest: () => {
             currentPet.energy = Math.min(100, currentPet.energy + 30);
             currentPet.hunger = Math.max(0, currentPet.hunger - 5);
-            return { item: 'Rest', type: 'rest' }; // Changed from null
+            return { item: 'Rest', type: 'rest' };
         },
         vet: () => {
             currentPet.health = 100;
@@ -773,6 +1032,12 @@ async function performAction(action, cost) {
     
     // Re-check achievements after any action
     await checkAchievements();
+
+    // Update charts if budget tab is active
+    if (document.querySelector('.tab-button[data-tab="budget"]').classList.contains('active')) {
+        loadExpenses().then(expenses => renderSpendingChart(expenses));
+        fetchBalanceHistory().then(history => renderBalanceHistoryChart(history));
+    }
     
     console.log('Action completed and saved to database');
 }
@@ -815,8 +1080,12 @@ async function deductBalance(amount) {
     if (updatedFinance) {
         document.getElementById('balance-amount').textContent = `$${updatedFinance.balance}`;
         await loadUserBalance();
+        await loadTotalSpent();
+        await updateSavingsGoalProgress();
     }
 }
+
+
 
 async function addExpense(itemName, type, amount) {
     await supabase.from('expenses').insert({
@@ -828,39 +1097,152 @@ async function addExpense(itemName, type, amount) {
     });
 }
 
-async function resetExpenses() {
-    // Delete all expenses for this pet when page loads
-    await supabase
+async function fetchBalanceHistory() {
+    // Fetch all expenses and tasks to reconstruct balance history
+    const { data: expenses, error: expensesError } = await supabase
         .from('expenses')
-        .delete()
-        .eq('pet_id', petId)
-        .eq('user_id', currentUser.id);
-}
+        .select('amount, created_at')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: true });
 
-async function loadExpenses() {
-    const { data: expenses } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('pet_id', petId)
-        .order('created_at', { ascending: false })
-        .limit(10);
+    const { data: tasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('reward_amount, completed_at')
+        .eq('user_id', currentUser.id)
+        .eq('completed', true)
+        .order('created_at', { ascending: true }); // Order by created_at for tasks too
 
-    const expensesList = document.getElementById('expenses-list');
+    if (expensesError) console.error('Error fetching expenses for history:', expensesError);
+    if (tasksError) console.error('Error fetching tasks for history:', tasksError);
 
-    if (!expenses || expenses.length === 0) {
-        expensesList.innerHTML = '<p class="no-data">No expenses yet</p>';
-        return;
+    const events = [];
+    if (expenses) {
+        expenses.forEach(exp => events.push({ type: 'expense', amount: exp.amount, date: new Date(exp.created_at) }));
+    }
+    if (tasks) {
+        tasks.forEach(task => events.push({ type: 'task', amount: task.reward_amount, date: new Date(task.completed_at) })); // Use completed_at for tasks
     }
 
-    expensesList.innerHTML = expenses.map(expense => `
-        <div class="expense-item">
-            <div class="expense-info">
-                <div class="expense-name">${expense.item_name}</div>
-                <div class="expense-type">${expense.expense_type} • ${new Date(expense.created_at).toLocaleDateString()}</div>
-            </div>
-            <div class="expense-amount">-$${expense.amount}</div>
-        </div>
-    `).join('');
+    events.sort((a, b) => a.date - b.date);
+
+    let currentBalance = (await loadUserBalance()) || 0; // Get current balance
+    const balanceHistory = [{ date: new Date(), balance: currentBalance }]; // Start with current balance
+
+    // Reconstruct history backwards from current balance
+    for (let i = events.length - 1; i >= 0; i--) {
+        const event = events[i];
+        if (event.type === 'expense') {
+            currentBalance += event.amount; // If it was an expense, add it back
+        } else if (event.type === 'task') {
+            currentBalance -= event.amount; // If it was a task reward, subtract it
+        }
+        balanceHistory.unshift({ date: event.date, balance: currentBalance });
+    }
+    
+    // Ensure unique dates for chart labels
+    const uniqueHistory = [];
+    const dates = new Set();
+    for (const entry of balanceHistory) {
+        const dateString = entry.date.toDateString();
+        if (!dates.has(dateString)) {
+            uniqueHistory.push(entry);
+            dates.add(dateString);
+        } else {
+            // If date exists, update the balance for that date
+            uniqueHistory[uniqueHistory.length - 1].balance = entry.balance;
+        }
+    }
+
+    return uniqueHistory;
+}
+
+function renderSpendingChart(expenses) {
+    const ctx = document.getElementById('spendingChart').getContext('2d');
+
+    const categories = {};
+    expenses.forEach(exp => {
+        categories[exp.expense_type] = (categories[exp.expense_type] || 0) + exp.amount;
+    });
+
+    const data = {
+        labels: Object.keys(categories),
+        datasets: [{
+            data: Object.values(categories),
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+            ],
+            hoverBackgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+            ]
+        }]
+    };
+
+    if (spendingChartInstance) {
+        spendingChartInstance.destroy();
+    }
+    spendingChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: data,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary')
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderBalanceHistoryChart(historyData) {
+    const ctx = document.getElementById('balanceHistoryChart').getContext('2d');
+
+    const labels = historyData.map(entry => entry.date.toLocaleDateString());
+    const dataPoints = historyData.map(entry => entry.balance);
+
+    const data = {
+        labels: labels,
+        datasets: [{
+            label: 'Balance',
+            data: dataPoints,
+            fill: false,
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--fbla-blue-600'),
+            tension: 0.1
+        }]
+    };
+
+    if (balanceHistoryChartInstance) {
+        balanceHistoryChartInstance.destroy();
+    }
+    balanceHistoryChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted')
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted')
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted')
+                    }
+                }
+            }
+        }
+    });
 }
 
 async function loadTasks() {
@@ -868,7 +1250,6 @@ async function loadTasks() {
         .from('tasks')
         .select('*')
         .eq('user_id', currentUser.id)
-        // Only load tasks that are not marked as completed in the database
         .eq('completed', false) 
         .order('created_at', { ascending: false });
 
@@ -879,30 +1260,46 @@ async function loadTasks() {
         return;
     }
 
-    tasksList.innerHTML = tasks.map(task => {
+    tasksList.innerHTML = '';
+    for (const task of tasks) {
         const isIncorrect = incorrectTaskIds.has(task.id);
-        let buttonHtml = `<button class="task-complete-btn" data-task-id="${task.id}">Complete</button>`;
-        let itemClass = '';
-
+        const taskItem = document.createElement('div');
+        taskItem.className = 'task-item';
         if (isIncorrect) {
-            itemClass = 'incorrect';
-            buttonHtml = `<button class="task-complete-btn" data-task-id="${task.id}" disabled>Incorrect</button>`;
+            taskItem.classList.add('incorrect');
+        }
+        taskItem.dataset.taskId = task.id;
+
+        const taskInfo = document.createElement('div');
+        taskInfo.className = 'task-info';
+
+        const taskName = document.createElement('div');
+        taskName.className = 'task-name';
+        taskName.textContent = task.task_name;
+
+        const taskReward = document.createElement('div');
+        taskReward.className = 'task-reward';
+        taskReward.textContent = `Reward: +$${task.reward_amount}`;
+
+        const button = document.createElement('button');
+        button.className = 'task-complete-btn';
+        button.dataset.taskId = task.id;
+        if (isIncorrect) {
+            button.textContent = 'Incorrect';
+            button.disabled = true;
+        } else {
+            button.textContent = 'Complete';
         }
 
-        return `
-            <div class="task-item ${itemClass}" data-task-id="${task.id}">
-                <div class="task-info">
-                    <div class="task-name">${task.task_name}</div>
-                    <div class="task-reward">Reward: +$${task.reward_amount}</div>
-                </div>
-                ${buttonHtml}
-            </div>
-        `;
-    }).join('');
+        taskInfo.appendChild(taskName);
+        taskInfo.appendChild(taskReward);
+        taskItem.appendChild(taskInfo);
+        taskItem.appendChild(button);
+        tasksList.appendChild(taskItem);
+    }
 }
 
 async function triggerTaskQuestion(taskId) {
-    // Do not trigger question for tasks marked incorrect in this session
     if (incorrectTaskIds.has(taskId)) return;
 
     const { data: task } = await supabase
@@ -913,21 +1310,27 @@ async function triggerTaskQuestion(taskId) {
 
     if (!task || task.completed) return;
 
-    // Store task info
     currentTaskInfo = {
         id: task.id,
         reward: Number(task.reward_amount) || 0,
         question: FBLA_QUESTIONS[Math.floor(Math.random() * FBLA_QUESTIONS.length)]
     };
 
-    // Populate and show modal
     questionText.textContent = currentTaskInfo.question.question;
-    answerOptionsContainer.innerHTML = currentTaskInfo.question.options.map((option, index) => `
-        <label class="answer-option">
-            <input type="radio" name="answer" value="${index}">
-            ${option}
-        </label>
-    `).join('');
+    answerOptionsContainer.innerHTML = '';
+    currentTaskInfo.question.options.forEach((option, index) => {
+        const label = document.createElement('label');
+        label.className = 'answer-option';
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'answer';
+        input.value = index;
+
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(option));
+        answerOptionsContainer.appendChild(label);
+    });
     questionResult.textContent = '';
     questionModal.style.display = 'block';
 }
@@ -947,7 +1350,6 @@ async function handleSubmitAnswer() {
         questionResult.style.color = '#22c55e';
 
         try {
-            // First, get current balance
             const { data: currentFinance, error: fetchError } = await supabase
                 .from('user_finances')
                 .select('*')
@@ -959,11 +1361,9 @@ async function handleSubmitAnswer() {
                 return;
             }
 
-            // Calculate new values
             const newBalance = currentFinance.balance + currentTaskInfo.reward;
             const newTotalEarned = currentFinance.total_earned + currentTaskInfo.reward;
 
-            // Update the balance
             const { data: updatedFinance, error: updateError } = await supabase
                 .from('user_finances')
                 .update({
@@ -977,15 +1377,14 @@ async function handleSubmitAnswer() {
             if (updateError) {
                 console.error('Error updating balance:', updateError);
             } else {
-                // Update the UI with new balance
                 document.getElementById('balance-amount').textContent = `$${updatedFinance.balance.toFixed(2)}`;
                 console.log('Balance updated successfully to:', updatedFinance.balance);
+                await updateSavingsGoalProgress();
             }
         } catch (err) {
             console.error('Error updating balance:', err);
         }
 
-        // Visually mark as correct but do not remove from list
         const taskItem = document.querySelector(`[data-task-id="${currentTaskInfo.id}"]`);
         if (taskItem) {
             taskItem.classList.add('correct');
@@ -996,7 +1395,6 @@ async function handleSubmitAnswer() {
             }
         }
         
-        // Mark as complete in DB so it doesn't show on next page load
         await supabase
             .from('tasks')
             .update({ completed: true, completed_at: new Date().toISOString() })
@@ -1006,10 +1404,8 @@ async function handleSubmitAnswer() {
         questionResult.textContent = 'Incorrect.';
         questionResult.style.color = '#dc2626';
         
-        // Add to client-side set of incorrect tasks
         incorrectTaskIds.add(currentTaskInfo.id);
         
-        // Update just the specific task item visually without reloading
         const taskItem = document.querySelector(`[data-task-id="${currentTaskInfo.id}"]`);
         if (taskItem) {
             taskItem.classList.add('incorrect');
@@ -1021,19 +1417,20 @@ async function handleSubmitAnswer() {
         }
     }
 
-    // Clean up and close modal after a delay
     setTimeout(async () => {
         questionModal.style.display = 'none';
         currentTaskInfo = null;
         submitAnswerBtn.disabled = false;
-        // Check achievements after task completion
         await checkAchievements();
+        // Update charts if budget tab is active
+        if (document.querySelector('.tab-button[data-tab="budget"]').classList.contains('active')) {
+            loadExpenses().then(expenses => renderSpendingChart(expenses));
+            fetchBalanceHistory().then(history => renderBalanceHistoryChart(history));
+        }
     }, 2000);
 }
 
-
 async function generateTasks() {
-    // Clear the incorrect tasks set when generating new ones
     incorrectTaskIds.clear();
 
     const taskTemplates = [
@@ -1054,14 +1451,12 @@ async function generateTasks() {
         .slice(0, 3);
 
     try {
-        // Remove any existing pending tasks for the user before creating new ones
         await supabase
             .from('tasks')
             .delete()
             .eq('user_id', currentUser.id)
             .eq('status', 'pending');
 
-        // Insert the newly generated tasks in a single batch
         const inserts = selectedTasks.map(t => ({
             user_id: currentUser.id,
             task_name: t.name,
@@ -1078,5 +1473,103 @@ async function generateTasks() {
         alert('Unable to generate tasks right now. Check console for details.');
     }
 }
+
+async function loadTotalSpent() {
+    const { data, error } = await supabase
+        .from('user_finances')
+        .select('total_spent')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Error loading total spent:', error);
+        return;
+    }
+
+    if (data) {
+        document.getElementById('total-spent-amount').textContent = `$${data.total_spent.toFixed(2)}`;
+    }
+}
+
+async function loadSavingsGoal() {
+    const { data: goal, error } = await supabase
+        .from('savings_goals')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('pet_id', petId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Error loading savings goal:', error);
+        return;
+    }
+
+    if (goal) {
+        document.getElementById('savings-goal-status').textContent = `Goal: $${goal.goal_amount.toFixed(2)}`;
+        document.getElementById('savings-goal-progress').style.display = 'block';
+        updateSavingsGoalProgress();
+    } else {
+        document.getElementById('savings-goal-status').textContent = 'No goal set.';
+        document.getElementById('savings-goal-progress').style.display = 'none';
+    }
+}
+
+async function updateSavingsGoalProgress() {
+    const { data: goal, error } = await supabase
+        .from('savings_goals')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('pet_id', petId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error || !goal) {
+        return;
+    }
+
+    const balance = parseFloat(document.getElementById('balance-amount').textContent.replace('$', ''));
+    const progress = Math.min(100, (balance / goal.goal_amount) * 100);
+    document.getElementById('savings-goal-progress-bar').style.width = `${progress}%`;
+    document.getElementById('savings-goal-progress-value').textContent = `$${balance.toFixed(2)} / $${goal.goal_amount.toFixed(2)}`;
+
+    if (balance >= goal.goal_amount && !shownSavingsGoalPopup) {
+        showSavingsGoalPopup();
+        shownSavingsGoalPopup = true;
+    }
+}
+
+async function setSavingsGoal() {
+    const goalAmount = parseFloat(document.getElementById('savings-goal-input').value);
+    if (isNaN(goalAmount) || goalAmount <= 0) {
+        alert('Please enter a valid goal amount.');
+        return;
+    }
+
+    const { error } = await supabase.from('savings_goals').insert({
+        user_id: currentUser.id,
+        pet_id: petId,
+        goal_amount: goalAmount
+    });
+
+    if (error) {
+        console.error('Error setting savings goal:', error);
+        alert('Failed to set savings goal.');
+        return;
+    }
+
+    shownSavingsGoalPopup = false;
+    await loadSavingsGoal();
+    await updateSavingsGoalProgress();
+    // Update charts if budget tab is active
+    if (document.querySelector('.tab-button[data-tab="budget"]').classList.contains('active')) {
+        loadExpenses().then(expenses => renderSpendingChart(expenses));
+        fetchBalanceHistory().then(history => renderBalanceHistoryChart(history));
+    }
+}
+
+document.getElementById('set-savings-goal-btn').addEventListener('click', setSavingsGoal);
 
 checkAuth();

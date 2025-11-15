@@ -147,6 +147,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    transition: all 140ms ease;
 }
 
 #back-btn:hover {
@@ -157,4 +158,3 @@
 #user-info {
     justify-content: center;
 }
-
