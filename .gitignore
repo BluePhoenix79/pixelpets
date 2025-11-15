@@ -6,8 +6,6 @@ node_modules/
 
 # VS Code specific files
 .vscode/launch.json
-.vscode/settings.json
-.vscode/tasks.json
 
 # Logs
 logs/
