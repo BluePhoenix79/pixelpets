@@ -5,20 +5,13 @@
     - Includes global layout, header, and reusable components styles
 */
 
-:root{
-        /* Heights used to reserve space for the header and top user bar so
-             the main content can be sized to the remaining viewport. Adjust
-             if you change header or user-info sizes. */
-        --topbar-height: 160px; /* header + optional user info */
-    --fbla-blue-900: #0b3d91; /* deep FBLA blue */
-    --fbla-blue-600: #1f60c4; /* vibrant primary */
-    --fbla-gold: #f0b400;     /* gold accent */
-    --muted-gray: #6b7280;
-    --bg-gradient: radial-gradient(ellipse at top left, #e0f0ff 0%, #f0f7ff 25%, #ffffff 50%, #f5f9ff 75%, #e8f2ff 100%);
-    --surface: #ffffff;
+:root {
+    --topbar-height: 160px; /* header + optional user info */
     --radius: 12px;
-    --shadow-1: 0 6px 20px rgba(11,61,145,0.12);
-    --shadow-2: 0 2px 6px rgba(11,61,145,0.06);
+    /* FBLA colors are kept here as they are brand-specific and not theme-dependent */
+    --fbla-blue-900: #0b3d91;
+    --fbla-blue-600: #1f60c4;
+    --fbla-gold: #f0b400;
 }
 
 *{box-sizing: border-box}
@@ -133,7 +126,7 @@ header.title h1{
     font-size: clamp(2rem, 3.5vw, 3.2rem);
     letter-spacing: -0.04em;
     font-weight: 900;
-    color: var(--fbla-blue-900);
+    color: var(--text-primary);
     position: relative;
     display: inline-block;
     text-transform: uppercase;
@@ -154,16 +147,16 @@ main{
     position: relative;
     width:100%;
     max-width:540px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.99));
     border-radius: var(--radius);
     box-shadow: var(--shadow-1);
     padding: 28px;
     border: 1px solid rgba(11,61,145,0.06);
     transform-origin: center;
     animation: card-enter 700ms cubic-bezier(.2,.9,.2,1) both;
-    overflow: visible;
+    overflow: hidden;
     margin: 20px auto;
     flex-shrink: 0;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 #controls::before {
@@ -183,34 +176,11 @@ main{
   );
   background-size: 400% 400%;
   border-radius: var(--radius);
-  opacity: 0.3;
+  opacity: 0.1;
   z-index: -1;
   transition: opacity 0.5s ease;
   filter: blur(10px);
   animation: holographic-shift 8s ease-in-out infinite;
-}
-
-#controls::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(11, 61, 145, 0.05) 0%,
-    rgba(31, 96, 196, 0.08) 33%,
-    rgba(240, 180, 0, 0.05) 66%,
-    rgba(11, 61, 145, 0.05) 100%
-  );
-  background-size: 300% 300%;
-  border-radius: var(--radius);
-  opacity: 1;
-  z-index: 0;
-  transition: opacity 0.5s ease;
-  animation: holographic-shift 10s ease-in-out infinite reverse;
-  pointer-events: none;
 }
 
 #controls > * {
@@ -219,12 +189,8 @@ main{
 }
 
 #controls:hover::before {
-  opacity: 0.2;
+  opacity: 0.3;
   filter: blur(8px);
-}
-
-#controls:hover::after {
-  opacity: 1;
 }
 
 #controls:hover {
@@ -239,7 +205,7 @@ main{
 #controls label{
     display:block;
     font-weight:600;
-    color: var(--fbla-blue-900);
+    color: var(--text-primary);
     margin: 14px 0 6px;
     font-size: 0.95rem;
 }
@@ -255,15 +221,15 @@ main{
     width:100%;
     padding: 12px 14px;
     border-radius: 10px;
-    border: 1px solid rgba(15,23,42,0.08);
-    background: linear-gradient(180deg, #fff, #fbfdff);
+    border: 1px solid var(--border-color);
+    background: var(--surface-medium);
     font-size: 0.95rem;
-    color: #07203a;
+    color: var(--text-secondary);
     transition: box-shadow 180ms ease, border-color 180ms ease, transform 150ms ease;
 }
 
 #new-pet-form input::placeholder{
-    color: var(--muted-gray);
+    color: var(--text-muted);
     opacity:0.85;
 }
 
@@ -301,7 +267,7 @@ main{
 }
 
 .muted{
-    color: var(--muted-gray);
+    color: var(--text-muted);
     font-size: 0.9rem;
 }
 
@@ -356,38 +322,45 @@ button:focus, input:focus, select:focus{
     max-width: 1200px;
     margin: 0 auto 16px;
     padding: 12px 24px;
-    background: rgba(255,255,255,0.9);
+    background: var(--surface-transparent);
     backdrop-filter: blur(10px);
     border-radius: 12px;
     box-shadow: var(--shadow-2);
     margin-top: 16px;
     position: relative;
     z-index: 10;
+    border: 1px solid var(--border-color);
+}
+
+.user-bar-buttons {
+    display: flex;
+    gap: 24px;
+    align-items: center;
 }
 
 .balance-display {
     font-size: 1.2rem;
     font-weight: 700;
-    color: var(--fbla-blue-900);
+    color: var(--text-primary);
 }
 
 #balance-amount {
     color: var(--fbla-gold);
 }
 
-.logout-btn {
+.user-bar-btn {
     padding: 8px 16px;
     border-radius: 8px;
     border: none;
-    background: rgba(11,61,145,0.1);
-    color: var(--fbla-blue-900);
+    background: var(--surface-medium);
+    color: var(--text-primary);
     font-weight: 600;
     cursor: pointer;
     transition: all 180ms ease;
 }
 
-.logout-btn:hover {
-    background: rgba(11,61,145,0.2);
+.user-bar-btn:hover {
+    background: var(--surface-dark);
     transform: translateY(-2px);
 }
 
@@ -396,7 +369,7 @@ button:focus, input:focus, select:focus{
 }
 
 #pet-list h2 {
-    color: var(--fbla-blue-900);
+    color: var(--text-primary);
     text-align: center;
     margin-bottom: 20px;
     font-size: 1.5rem;
@@ -410,23 +383,53 @@ button:focus, input:focus, select:focus{
 }
 
 .pet-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.99));
     border-radius: 12px;
     padding: 20px;
     text-align: center;
     box-shadow: var(--shadow-2);
     border: 1px solid rgba(11,61,145,0.08);
     transition: all 200ms ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.pet-card::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    var(--fbla-blue-900),
+    var(--fbla-blue-600),
+    var(--fbla-gold),
+    var(--fbla-blue-600),
+    var(--fbla-blue-900)
+  );
+  background-size: 400% 400%;
+  border-radius: 12px;
+  opacity: 0.1;
+  z-index: -1;
+  transition: opacity 0.5s ease;
+  filter: blur(10px);
+  animation: holographic-shift 8s ease-in-out infinite;
 }
 
 .pet-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-1);
+    box-shadow: 0 12px 40px rgba(31,96,196,0.25), 0 0 60px rgba(11,61,145,0.12);
+}
+
+.pet-card:hover::before {
+  opacity: 0.3;
+  filter: blur(8px);
 }
 
 .pet-card h3 {
     margin: 0 0 8px 0;
-    color: var(--fbla-blue-900);
+    color: var(--text-primary);
     font-size: 1.3rem;
 }
 

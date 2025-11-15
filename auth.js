@@ -14,61 +14,6 @@ const loginMessage = document.getElementById('login-message');
 const signupMessage = document.getElementById('signup-message');
 const tabBtns = document.querySelectorAll('.tab-btn');
 
-/**
- * Validates email format using RFC 5322 compliant regex
- * @param {string} email - Email address to validate
- * @returns {object} - {isValid: boolean, error: string}
- */
-function validateEmail(email) {
-    // Check if email is empty
-    if (!email || email.trim() === '') {
-        return { isValid: false, error: 'Email is required' };
-    }
-
-    // Remove leading/trailing whitespace
-    email = email.trim();
-
-    // Check length constraints
-    if (email.length > 254) {
-        return { isValid: false, error: 'Email is too long (max 254 characters)' };
-    }
-
-    // Check for basic format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-        return { isValid: false, error: 'Please enter a valid email address' };
-    }
-
-    return { isValid: true, error: null };
-}
-
-function validatePassword(password, isSignup = false) {
-    if (!password) {
-        return { isValid: false, error: 'Password is required' };
-    }
-
-    if (password.length < 6) {
-        return { isValid: false, error: 'Password must be at least 6 characters long' };
-    }
-
-    if (password.length > 128) {
-        return { isValid: false, error: 'Password is too long (max 128 characters)' };
-    }
-
-    if (isSignup) {
-        if (!/[a-zA-Z]/.test(password)) {
-            return { isValid: false, error: 'Password must contain at least one letter' };
-        }
-
-        if (!/[0-9]/.test(password)) {
-            return { isValid: false, error: 'Password must contain at least one number' };
-        }
-    }
-
-    return { isValid: true, error: null };
-}
-
-
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
@@ -94,19 +39,11 @@ loginForm.addEventListener('submit', async (e) => {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
-    // Validate email
-    const emailCheck = validateEmail(email);
-    if (!emailCheck.isValid) {
-        loginMessage.textContent = emailCheck.error;
-        loginMessage.className = 'message error';
-        return;
-    }
-
-        // Attempt to sign in using Supabase Auth
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
+    // Attempt to sign in using Supabase Auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
 
     if (error) {
         loginMessage.textContent = error.message;
@@ -120,6 +57,7 @@ loginForm.addEventListener('submit', async (e) => {
     }
 });
 
+// In auth.js - signup form handler
 signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     signupMessage.className = 'message';
@@ -127,18 +65,9 @@ signupForm.addEventListener('submit', async (e) => {
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
 
-    // Validate email
-    const emailCheck = validateEmail(email);
-    if (!emailCheck.isValid) {
-        signupMessage.textContent = emailCheck.error;
-        signupMessage.className = 'message error';
-        return;
-    }
-
-    // Validate password
-    const passwordCheck = validatePassword(password, true);
-    if (!passwordCheck.isValid) {
-        signupMessage.textContent = passwordCheck.error;
+    // Basic client-side password validation before sign up
+    if (password.length < 6) {
+        signupMessage.textContent = 'Password must be at least 6 characters';
         signupMessage.className = 'message error';
         return;
     }
@@ -159,19 +88,17 @@ signupForm.addEventListener('submit', async (e) => {
         signupMessage.textContent = error.message;
         signupMessage.className = 'message error';
     } else {
-        // Initialize user's in-game finances after successful signup
+        // Initialize user's in-game finances with LOWER starting balance
         const { error: financeError } = await supabase.from('user_finances').insert({
             user_id: data.user.id,
-            balance: 20,
-            total_earned: 20,
+            balance: 10, // Changed from 20 to 10
+            total_earned: 10, // Changed from 20 to 10
             total_spent: 0
         });
 
         if (financeError) {
             signupMessage.textContent = 'Error setting up your account finances. Please try again.';
             signupMessage.className = 'message error';
-            // Optionally, you might want to delete the user here to allow them to retry signing up
-            // await supabase.auth.api.deleteUser(data.user.id);
             return;
         }
 
