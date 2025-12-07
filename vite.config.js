@@ -4,7 +4,7 @@ import { resolve } from 'path';
 export default defineConfig({
 
   build: {
-    outDir: '../dist', // Output to a 'dist' folder in the project root
+    outDir: 'dist', // Output to a 'dist' folder inside the project
     rollupOptions: {
       input: {
         index: resolve(__dirname, 'index.html'),
