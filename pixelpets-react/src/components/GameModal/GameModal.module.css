@@ -1,0 +1,581 @@
+/* GameModal Styles */
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modalContent {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.closeBtn {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.closeBtn:hover {
+  color: var(--text-primary);
+}
+
+/* Game Header */
+.gameHeader {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.gameHeader h2 {
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.instructions {
+  color: var(--text-muted);
+  font-size: 1rem;
+  margin: 0 0 12px;
+}
+
+.rewardBadge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--fbla-gold), #f59e0b);
+  color: #1a1a1a;
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* Game Area */
+.gameArea {
+  min-height: 200px;
+}
+
+/* Result Message */
+.resultMessage {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.resultMessage.success {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.resultMessage.failure {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+/* Model Attribution */
+.generatedBy {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* Shared Buttons */
+.submitBtn {
+  display: block;
+  width: 100%;
+  padding: 14px 24px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--fbla-blue-600), var(--fbla-blue-900));
+  color: white;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-top: 16px;
+}
+
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(31, 96, 196, 0.3);
+}
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hintBtn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 2px solid var(--fbla-gold);
+  background: transparent;
+  color: var(--fbla-gold);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hintBtn:hover {
+  background: var(--fbla-gold);
+  color: #1a1a1a;
+}
+
+/* ============================================
+   MATH CHALLENGE GAME
+   ============================================ */
+.mathGame {
+  text-align: center;
+}
+
+.difficultyBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.difficultyBadge[data-difficulty="easy"] {
+  background: #22c55e;
+  color: white;
+}
+
+.difficultyBadge[data-difficulty="medium"] {
+  background: #f59e0b;
+  color: white;
+}
+
+.difficultyBadge[data-difficulty="hard"] {
+  background: #ef4444;
+  color: white;
+}
+
+.question {
+  font-size: 1.3rem;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.dollarSign {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.mathInput {
+  padding: 14px 20px;
+  font-size: 1.2rem;
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+  background: var(--surface-medium);
+  color: var(--text-primary);
+  width: 200px;
+  text-align: center;
+}
+
+.mathInput:focus {
+  outline: none;
+  border-color: var(--fbla-blue-600);
+}
+
+.buttonRow {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.hint {
+  margin-top: 16px;
+  color: var(--fbla-gold);
+  font-style: italic;
+}
+
+/* ============================================
+   BUDGET PUZZLE GAME
+   ============================================ */
+.budgetGame {
+  text-align: center;
+}
+
+.scenario {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.budgetBar {
+  position: relative;
+  height: 30px;
+  background: var(--surface-medium);
+  border-radius: 15px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.budgetProgress {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  border-radius: 15px;
+  transition: width 0.3s ease;
+}
+
+.budgetBar span {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 700;
+  color: var(--text-primary);
+  z-index: 1;
+}
+
+.itemGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.itemBtn {
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+  background: var(--surface-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemBtn:hover {
+  border-color: var(--fbla-blue-600);
+  transform: translateY(-2px);
+}
+
+.itemBtn.selected {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.itemName {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.itemCost {
+  color: var(--fbla-gold);
+  font-weight: 700;
+}
+
+/* ============================================
+   MEMORY MATCH GAME
+   ============================================ */
+.memoryGame h4 {
+  text-align: center;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.matchGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.termsColumn, .defsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.termsColumn h5, .defsColumn h5 {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.matchCard {
+  padding: 14px;
+  border-radius: 10px;
+  border: 2px solid var(--border-color);
+  background: var(--surface-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.matchCard:hover:not(.matched) {
+  border-color: var(--fbla-blue-600);
+}
+
+.matchCard.selected {
+  border-color: var(--fbla-gold);
+  background: rgba(240, 180, 0, 0.1);
+}
+
+.matchCard.matched {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+  opacity: 0.7;
+}
+
+.matchCard.matchedColored {
+  opacity: 1;
+  cursor: default;
+  position: relative;
+}
+
+.matchDot {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   QUICK SORT GAME
+   ============================================ */
+.sortGame {
+  text-align: center;
+}
+
+.sortInstruction {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.sortCategory {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--surface-medium);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.sortList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.sortItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-medium);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.sortNumber {
+  width: 30px;
+  height: 30px;
+  background: var(--fbla-blue-600);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sortText {
+  flex: 1;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.sortButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sortButtons button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--surface-dark);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sortButtons button:hover:not(:disabled) {
+  background: var(--fbla-blue-600);
+  color: white;
+}
+
+.sortButtons button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   TRIVIA GAME
+   ============================================ */
+.triviaGame {
+  text-align: center;
+}
+
+.triviaCategory {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--fbla-blue-600);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.triviaQuestion {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.triviaOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.triviaOption {
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+  background: var(--surface-medium);
+  color: var(--text-primary);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.triviaOption:hover:not(:disabled) {
+  border-color: var(--fbla-blue-600);
+  background: var(--surface-dark);
+}
+
+.triviaOption.selected {
+  border-color: var(--fbla-blue-600);
+  background: rgba(31, 96, 196, 0.1);
+}
+
+.triviaOption.correct {
+  border-color: #22c55e !important;
+  background: rgba(34, 197, 94, 0.2) !important;
+}
+
+.triviaOption.wrong {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.2) !important;
+}
+
+.explanation {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .modalContent {
+    padding: 20px;
+  }
+  
+  .gameHeader h2 {
+    font-size: 1.4rem;
+  }
+  
+  .matchGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .itemGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
