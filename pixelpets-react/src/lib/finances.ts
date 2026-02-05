@@ -3,7 +3,9 @@ import type { UserFinances } from '../types';
 
 /**
  * increaseBalance: safely increase user's balance and total_earned.
- * Returns the updated finance row or null on error.
+ * LOGIC: Uses a Postgres RPC (Stored Procedure) to perform the update atomically.
+ * This ensures that if two rewards happen simultaneously, we don't have a race condition
+ * that overwrites one of the balance updates.
  */
 export async function increaseBalance(userId: string, amount: number): Promise<UserFinances | null> {
   if (!userId || amount === undefined || amount === null) return null;
@@ -51,8 +53,10 @@ export async function decreaseBalance(userId: string, amount: number): Promise<U
 }
 
 /**
- * ensureFinance: make sure a `user_finances` row exists for the user.
- * Returns the finance row (existing or newly created) or null on error.
+ * ensureFinance: Guaranteed to return a valid finance row.
+ * LOGIC: If a user doesn't have a finance row (new account), we create one immediately
+ * with a starting balance of $50 so they can afford their first pet adoption.
+ * This prevents null reference errors throughout the app.
  */
 export async function ensureFinance(userId: string): Promise<UserFinances | null> {
   if (!userId) return null;
@@ -70,8 +74,8 @@ export async function ensureFinance(userId: string): Promise<UserFinances | null
 
   if (finance) return finance as UserFinances;
 
-  // Create with default starting balance
-  const initial = 20;
+  // Create with default starting balance ($50 = enough for first pet)
+  const initial = 50;
   const { data: inserted, error: insertErr } = await supabase.from('user_finances').insert({
     user_id: userId,
     balance: initial,

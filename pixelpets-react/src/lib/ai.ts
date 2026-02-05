@@ -3,8 +3,12 @@ import type { TriviaGame, MiniGame } from '../data/miniGames';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
-// Models ordered by RPM/RPD - spreads usage evenly for maximum total requests
-// Only text-out compatible models included
+/**
+ * GEMINI_MODELS Configuration
+ * LOGIC: Ordered by Requests-Per-Minute (RPM) and Requests-Per-Day (RPD) limits.
+ * We prioritize "Flash" models which are faster and cheaper, then fallback to "Pro" models.
+ * This ensures the app remains responsive even under heavy usage.
+ */
 const GEMINI_MODELS = [
   'gemini-3-flash',           // 5 RPM, 20 RPD
   'gemini-2.5-flash',         // 5 RPM, 20 RPD
@@ -18,6 +22,21 @@ const GEMINI_MODELS = [
 
 // Track which model to try first (rotates on each call)
 let currentModelIndex = 0;
+
+// Persist last successful model in localStorage for faster first requests
+const LAST_WORKING_MODEL_KEY = 'ai_last_working_model';
+
+function getLastWorkingModel(): string | null {
+  return localStorage.getItem(LAST_WORKING_MODEL_KEY);
+}
+
+function setLastWorkingModel(model: string): void {
+  localStorage.setItem(LAST_WORKING_MODEL_KEY, model);
+}
+
+function clearLastWorkingModel(): void {
+  localStorage.removeItem(LAST_WORKING_MODEL_KEY);
+}
 
 // Extended trivia with model info
 export interface AITriviaGame extends TriviaGame {
@@ -55,7 +74,9 @@ export function setCustomTopic(topic: string): void {
 
 /**
  * Generate a question using direct API call with model rotation
- * Falls back to Supabase Edge Function if no API key is configured
+ * LOGIC: To maximize reliability and minimize cost/rate-limits, we rotate through
+ * a list of available Gemini models (Flash, Pro, Lite). If one model fails (429 Too Many Requests),
+ * we automatically fallback to the next one in the list.
  */
 export async function generateAIQuestion(type: AIRequestType = 'trivia'): Promise<MiniGame | null> {
   // Get topic preference
@@ -81,21 +102,39 @@ export async function generateAIQuestion(type: AIRequestType = 'trivia'): Promis
 
 /**
  * Try each model in rotation until one succeeds
+ * Prioritizes the last working model if available
  */
 async function generateDirectWithRotation(category: string, type: AIRequestType): Promise<MiniGame | null> {
+  // Try last working model first
+  const lastWorkingModel = getLastWorkingModel();
+  if (lastWorkingModel && GEMINI_MODELS.includes(lastWorkingModel)) {
+    console.log(`Trying last working model first: ${lastWorkingModel}`);
+    const result = await tryGenerateWithModel(lastWorkingModel, category, type);
+    if (result.success && result.data) {
+      return { ...result.data, generatedBy: lastWorkingModel };
+    }
+    // Last working model failed, clear it and continue with rotation
+    console.log(`Last working model ${lastWorkingModel} failed, trying rotation...`);
+    clearLastWorkingModel();
+  }
+
   const startIndex = currentModelIndex;
   
   for (let i = 0; i < GEMINI_MODELS.length; i++) {
     const modelIndex = (startIndex + i) % GEMINI_MODELS.length;
     const model = GEMINI_MODELS[modelIndex];
     
+    // Skip if we just tried this model
+    if (model === lastWorkingModel) continue;
+    
     console.log(`Trying model: ${model}`);
     
     const result = await tryGenerateWithModel(model, category, type);
     
     if (result.success && result.data) {
-      // Rotate to next model for next request
+      // Rotate to next model for next request & persist this working model
       currentModelIndex = (modelIndex + 1) % GEMINI_MODELS.length;
+      setLastWorkingModel(model);
       return { ...result.data, generatedBy: model };
     }
     

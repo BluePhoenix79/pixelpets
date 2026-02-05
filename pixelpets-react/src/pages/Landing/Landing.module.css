@@ -1,48 +1,69 @@
-/* Landing Page - Game Title Screen & Scroll Layout */
+/* Landing Page - Modern Premium Design */
 
 .landingPage {
     min-height: 100vh;
-    background: #0f0f1a;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #0a0a14 0%, #0f0f1a 50%, #1a1a2e 100%);
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     color: white;
     overflow-x: hidden;
 }
 
 /* =========================================
-   HERO SECTION (Title Screen)
+   HERO SECTION - Premium Title Screen
    ========================================= */
 .heroSection {
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
-    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%);
     overflow: hidden;
 }
 
-/* Starfield Background */
+/* Animated Gradient Background */
 .heroSection::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    right: -50%;
+    bottom: -50%;
+    background: 
+        radial-gradient(ellipse at 20% 30%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 70%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(251, 191, 36, 0.05) 0%, transparent 40%);
+    animation: gradientOrbit 20s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes gradientOrbit {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Starfield with Parallax */
+.heroSection::after {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 200%;
+    height: 200%;
     background-image: 
-        radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 50px 160px, #ffffff, rgba(0,0,0,0)),
-        radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0));
+        radial-gradient(2px 2px at 20px 30px, rgba(255,255,255,0.8), transparent),
+        radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(2px 2px at 130px 80px, rgba(255,255,255,0.4), transparent),
+        radial-gradient(1px 1px at 160px 120px, rgba(255,255,255,0.7), transparent);
     background-size: 200px 200px;
-    opacity: 0.3;
-    animation: starsMove 60s linear infinite;
+    opacity: 0.4;
+    animation: starsFloat 80s linear infinite;
 }
 
-@keyframes starsMove {
-    from { transform: translateY(0); }
-    to { transform: translateY(-1000px); }
+@keyframes starsFloat {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(-500px, -500px); }
 }
 
 .heroContent {
@@ -59,88 +80,122 @@
 }
 
 .mainTitle {
-    font-size: 5rem;
+    font-size: clamp(3rem, 10vw, 6rem);
     font-weight: 900;
     margin: 0;
     line-height: 1;
-    letter-spacing: 4px;
-    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    letter-spacing: 6px;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 30%, #d97706 60%, #fbbf24 100%);
+    background-size: 200% auto;
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 4px 0 #92400e);
+    animation: shimmer 3s ease-in-out infinite;
+    filter: drop-shadow(0 4px 0 rgba(146, 64, 14, 0.8));
+}
+
+@keyframes shimmer {
+    0%, 100% { background-position: 0% center; }
+    50% { background-position: 100% center; }
 }
 
 .subtitle {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: #94a3b8;
     margin-top: 1rem;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
     text-transform: uppercase;
+    opacity: 0.8;
 }
 
 .petShowcase {
     display: flex;
-    gap: 2rem;
-    margin: 2rem 0;
+    gap: 2.5rem;
+    margin: 2.5rem 0;
+    perspective: 1000px;
 }
 
 .floatingPet img {
-    width: 80px;
-    height: 80px;
+    width: 90px;
+    height: 90px;
     image-rendering: pixelated;
-    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
+    transition: transform 0.3s ease;
 }
 
-.floatingPet:nth-child(1) { animation: float 3s ease-in-out infinite; }
-.floatingPet:nth-child(2) { animation: float 3s ease-in-out infinite 0.5s; }
-.floatingPet:nth-child(3) { animation: float 3s ease-in-out infinite 1s; }
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-15px); }
+.floatingPet:hover img {
+    transform: scale(1.2) rotate(5deg);
 }
 
+.floatingPet:nth-child(1) { animation: floatBounce 3s ease-in-out infinite; }
+.floatingPet:nth-child(2) { animation: floatBounce 3s ease-in-out infinite 0.4s; }
+.floatingPet:nth-child(3) { animation: floatBounce 3s ease-in-out infinite 0.8s; }
+
+@keyframes floatBounce {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50% { transform: translateY(-20px) rotate(2deg); }
+}
+
+/* Modern Gradient Button */
 .playButton {
     display: inline-block;
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #3b82f6 100%);
+    background-size: 200% auto;
     color: white;
     text-decoration: none;
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     font-weight: 800;
-    padding: 1.2rem 4rem;
-    border-radius: 12px;
-    border: 4px solid #1d4ed8;
-    box-shadow: 0 8px 0 #1e40af, 0 15px 20px rgba(0,0,0,0.4);
-    transition: all 0.1s ease;
-    animation: pulseBtn 2s infinite;
+    padding: 1.2rem 3.5rem;
+    border-radius: 16px;
+    border: none;
+    box-shadow: 
+        0 10px 30px rgba(59, 130, 246, 0.4),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.playButton::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
 }
 
 .playButton:hover {
-    transform: translateY(4px);
-    box-shadow: 0 4px 0 #1e40af;
-    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 40px rgba(59, 130, 246, 0.5);
+    background-position: right center;
+}
+
+.playButton:hover::before {
+    left: 100%;
 }
 
 .playButton:active {
-    transform: translateY(8px);
-    box-shadow: 0 0 0 #1e40af;
-}
-
-@keyframes pulseBtn {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+    transform: translateY(0) scale(0.98);
 }
 
 .scrollIndicator {
-    margin-top: 4rem;
+    margin-top: 3rem;
     opacity: 0.6;
-    animation: bounce 2s infinite;
+    animation: fadeInUp 1s ease 0.5s both, bounce 2s infinite 1.5s;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.9rem;
-    letter-spacing: 1px;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 0.6; transform: translateY(0); }
 }
 
 .arrow {
@@ -154,11 +209,11 @@
 }
 
 /* =========================================
-   INFO SECTION (Scrollable)
+   INFO SECTION - Modern Cards
    ========================================= */
 .infoSection {
-    background: #0f0f1a;
-    padding: 6rem 2rem;
+    background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 100%);
+    padding: 8rem 2rem;
     position: relative;
     z-index: 20;
 }
@@ -167,22 +222,57 @@
     max-width: 1200px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 2rem;
 }
 
+/* Glassmorphism Card */
 .infoCard {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
     padding: 2rem;
-    transition: transform 0.3s ease;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+    position: relative;
+    overflow: hidden;
+    /* Scroll animation initial state */
+    opacity: 0;
+    transform: translateY(40px);
 }
 
-.infoCard:hover {
-    transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(59, 130, 246, 0.5);
+/* Gradient border on hover */
+.infoCard::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899, #fbbf24);
+    background-size: 300% 300%;
+    border-radius: 22px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: gradientMove 4s ease infinite;
+}
+
+@keyframes gradientMove {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.infoCard.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.infoCard.visible:hover {
+    transform: translateY(-8px);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.infoCard.visible:hover::before {
+    opacity: 1;
 }
 
 .infoCard h2 {
@@ -205,12 +295,22 @@
     margin-top: 4rem;
     padding-top: 4rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    /* Scroll animation */
+    opacity: 0;
+    transform: translateY(40px);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ctaSection.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .ctaSection h2 {
     font-size: 2.5rem;
     margin-bottom: 2rem;
     background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -247,4 +347,55 @@
     .heroSection { height: auto; min-height: 100vh; padding: 4rem 1rem; }
     .floatingPet img { width: 60px; height: 60px; }
     .infoContainer { grid-template-columns: 1fr; }
+}
+
+/* ===============================================
+   LIGHT THEME OVERRIDES
+   =============================================== */
+
+:global([data-theme='light']) .landingPage {
+    background: #f8fafc;
+}
+
+:global([data-theme='light']) .heroSection {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+:global([data-theme='light']) .heroSection::before {
+    opacity: 0.1;
+}
+
+:global([data-theme='light']) .subtitle {
+    color: #64748b;
+}
+
+:global([data-theme='light']) .scrollIndicator {
+    color: #64748b;
+}
+
+:global([data-theme='light']) .infoSection {
+    background: #f1f5f9;
+}
+
+:global([data-theme='light']) .infoCard {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: #e2e8f0;
+}
+
+:global([data-theme='light']) .infoCard:hover {
+    background: #ffffff;
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+:global([data-theme='light']) .infoCard p {
+    color: #475569;
+}
+
+:global([data-theme='light']) .ctaSection {
+    border-top-color: #e2e8f0;
+}
+
+:global([data-theme='light']) .footer {
+    background: #e2e8f0;
+    color: #64748b;
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import styles from './Landing.module.css';
 import dogImg from '../../assets/dog.png';
@@ -5,6 +6,39 @@ import catImg from '../../assets/cat.png';
 import mouseImg from '../../assets/mouse.png';
 
 export default function Landing() {
+  const infoSectionRef = useRef<HTMLElement>(null);
+
+  // Scroll animation with IntersectionObserver
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add(styles.visible);
+          }
+        });
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }
+    );
+
+    // Observe all info cards
+    const cards = infoSectionRef.current?.querySelectorAll(`.${styles.infoCard}`);
+    cards?.forEach((card, index) => {
+      // Add staggered animation delay
+      (card as HTMLElement).style.transitionDelay = `${index * 0.1}s`;
+      observer.observe(card);
+    });
+
+    // Also observe the CTA section
+    const cta = infoSectionRef.current?.querySelector(`.${styles.ctaSection}`);
+    if (cta) {
+      (cta as HTMLElement).style.transitionDelay = '0.4s';
+      observer.observe(cta);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className={styles.landingPage}>
       <section className={styles.heroSection}>
@@ -37,7 +71,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className={styles.infoSection}>
+      <section className={styles.infoSection} ref={infoSectionRef}>
         <div className={styles.infoContainer}>
           <div className={styles.infoCard}>
             <h2>ADOPT & RAISE</h2>

@@ -59,7 +59,21 @@
    BASE STYLES
    =============================================== */
 
-* { box-sizing: border-box; }
+/* ===============================================
+   BASE STYLES
+   =============================================== */
+
+/* Hide Scrollbars Globally */
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+}
+
+* {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+    box-sizing: border-box; 
+}
 
 /* Force crisp edges for all images in this pixel-art app */
 img {
@@ -627,4 +641,131 @@ button:focus, input:focus, select:focus {
         margin: 0 8px 12px;
         padding: 10px 16px;
     }
+}
+
+/* ===============================================
+   COMPREHENSIVE LIGHT THEME OVERRIDES
+   =============================================== */
+
+[data-theme='light'] {
+    /* Light theme already defined in :root, these are additional overrides */
+    --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #cbd5e1 100%);
+    --surface: #ffffff;
+    --surface-transparent: rgba(255, 255, 255, 0.95);
+    --surface-medium: #f1f5f9;
+    --surface-dark: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #1e293b;
+    --text-muted: #64748b;
+    --border-color: #cbd5e1;
+    --shadow-1: 0 4px 15px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+    --shadow-2: 0 2px 8px rgba(0, 0, 0, 0.05);
+    --action-btn-bg: linear-gradient(180deg, #ffffff, #f8fafc);
+    --action-btn-border: rgba(0, 0, 0, 0.1);
+    --fbla-blue-900: #0b3d91;
+    --fbla-blue-600: #1f60c4;
+}
+
+[data-theme='light'] body {
+    background: var(--bg-gradient);
+    color: var(--text-secondary);
+}
+
+[data-theme='light'] body::before {
+    background: radial-gradient(circle at 30% 20%, rgba(31,96,196,0.05) 0%, transparent 25%),
+                radial-gradient(circle at 70% 80%, rgba(240,180,0,0.04) 0%, transparent 20%);
+}
+
+[data-theme='light'] .controls,
+[data-theme='light'] .pet-card,
+[data-theme='light'] .user-info {
+    background: var(--surface);
+    border-color: var(--border-color);
+    box-shadow: var(--shadow-1);
+}
+
+[data-theme='light'] .controls::before,
+[data-theme='light'] .pet-card::before {
+    opacity: 0.05;
+}
+
+[data-theme='light'] header.title h1 {
+    color: var(--fbla-blue-900);
+}
+
+[data-theme='light'] .form-group input,
+[data-theme='light'] .form-group select {
+    background: var(--surface-medium);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+[data-theme='light'] .form-group input::placeholder {
+    color: var(--text-muted);
+}
+
+[data-theme='light'] .form-group input:focus,
+[data-theme='light'] .form-group select:focus {
+    border-color: var(--fbla-blue-600);
+    box-shadow: 0 0 0 3px rgba(31, 96, 196, 0.1);
+}
+
+[data-theme='light'] .user-bar-btn {
+    background: var(--surface-medium);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+[data-theme='light'] .user-bar-btn:hover {
+    background: var(--surface-dark);
+}
+
+[data-theme='light'] .balance-display {
+    color: var(--text-primary);
+}
+
+[data-theme='light'] .pet-card h3 {
+    color: var(--text-primary);
+}
+
+[data-theme='light'] .pet-species {
+    color: var(--text-muted);
+}
+
+[data-theme='light'] .modal-overlay {
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='light'] .modal-content {
+    background: var(--surface);
+    border-color: var(--border-color);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme='light'] .modal-content h3 {
+    color: var(--text-primary);
+}
+
+[data-theme='light'] .close-btn {
+    color: var(--text-muted);
+}
+
+[data-theme='light'] .close-btn:hover {
+    color: var(--text-primary);
+}
+
+[data-theme='light'] .message.error {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+[data-theme='light'] .message.success {
+    background: #f0fdf4;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+
+[data-theme='light'] .muted {
+    color: var(--text-muted);
 }

@@ -228,3 +228,76 @@
     background: #ef4444;
     color: white;
 }
+
+/* ===============================================
+   LIGHT THEME OVERRIDES
+   =============================================== */
+
+:global([data-theme='light']) .settingsPage {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    color: #1e293b;
+}
+
+:global([data-theme='light']) .settingCard {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+:global([data-theme='light']) .settingCard:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+}
+
+:global([data-theme='light']) .settingCard h2 {
+    color: #1e293b;
+}
+
+:global([data-theme='light']) .settingDescription {
+    color: #64748b;
+}
+
+:global([data-theme='light']) .inputWithButton input {
+    background: rgba(241, 245, 249, 0.8);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #1e293b;
+}
+
+:global([data-theme='light']) .inputWithButton input:focus {
+    background: white;
+    border-color: #3b82f6;
+}
+
+:global([data-theme='light']) .petItem {
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme='light']) .petItem:hover {
+    background: rgba(226, 232, 240, 0.8);
+}
+
+:global([data-theme='light']) .petItem strong {
+    color: #1e293b;
+}
+
+:global([data-theme='light']) .petSpecies {
+    color: #64748b;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+:global([data-theme='light']) .noPets {
+    color: #64748b;
+    background: rgba(241, 245, 249, 0.6);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+:global([data-theme='light']) .renameBtn {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+:global([data-theme='light']) .deleteBtn {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}

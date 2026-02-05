@@ -232,15 +232,21 @@
     box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
 }
 
-/* Pets Grid */
+/* Pets Grid - Horizontal Flex Layout */
 .petsGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    display: flex;
+    flex-direction: row; /* Explicitly horizontal */
+    flex-wrap: wrap;     /* Allow wrapping if needed */
     gap: 24px;
+    justify-content: flex-start; /* Align to left, not center */
+    align-items: stretch;
 }
 
 /* Pet Card */
 .petCard {
+    flex: 0 0 280px;  /* Rigid width: Don't grow, Don't shrink below 280 */
+    width: 280px;     /* Explicit width buffer */
+    max-width: none;  /* Remove constraint */
     background: rgba(30, 41, 59, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 20px;
@@ -474,4 +480,132 @@
     .formRow {
         flex-direction: column;
     }
+}
+
+/* ===============================================
+   LIGHT THEME OVERRIDES
+   =============================================== */
+
+:global([data-theme='light']) .dashboardPage {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    color: #1e293b;
+}
+
+:global([data-theme='light']) .header {
+    background: rgba(255, 255, 255, 0.9);
+    border-bottom-color: #e2e8f0;
+}
+
+:global([data-theme='light']) .settingsBtn,
+:global([data-theme='light']) .logoutBtn {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+:global([data-theme='light']) .settingsBtn:hover {
+    background: #e2e8f0;
+}
+
+:global([data-theme='light']) .logoutBtn {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+:global([data-theme='light']) .logoutBtn:hover {
+    background: #fee2e2;
+}
+
+:global([data-theme='light']) .balanceCard {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: #e2e8f0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+:global([data-theme='light']) .balanceCard:hover {
+    background: #ffffff;
+}
+
+:global([data-theme='light']) .balanceLabel {
+    color: #64748b;
+}
+
+:global([data-theme='light']) .sectionHeader h2 {
+    color: #0f172a;
+}
+
+:global([data-theme='light']) .newPetForm {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: #e2e8f0;
+}
+
+:global([data-theme='light']) .newPetForm input,
+:global([data-theme='light']) .newPetForm select {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #1e293b;
+}
+
+:global([data-theme='light']) .newPetForm input:focus,
+:global([data-theme='light']) .newPetForm select:focus {
+    background: #ffffff;
+    border-color: #3b82f6;
+}
+
+:global([data-theme='light']) .petCard {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: #e2e8f0;
+}
+
+:global([data-theme='light']) .petCard::before {
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+}
+
+:global([data-theme='light']) .petCard:hover {
+    background: #ffffff;
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+}
+
+:global([data-theme='light']) .petName {
+    color: #0f172a;
+}
+
+:global([data-theme='light']) .petSpecies {
+    color: #64748b;
+    background: rgba(0, 0, 0, 0.04);
+}
+
+:global([data-theme='light']) .petStats {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: #e2e8f0;
+}
+
+:global([data-theme='light']) .miniBar {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+:global([data-theme='light']) .careBtn {
+    background: rgba(59, 130, 246, 0.05);
+    color: #2563eb;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+:global([data-theme='light']) .careBtn:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+:global([data-theme='light']) .emptyState {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: #cbd5e1;
+}
+
+:global([data-theme='light']) .emptyState h3 {
+    color: #0f172a;
+}
+
+:global([data-theme='light']) .emptyState p {
+    color: #64748b;
 }

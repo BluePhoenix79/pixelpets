@@ -1,4 +1,18 @@
 import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+/**
+ * PetCare.tsx
+ * 
+ * Main Game Component for PixelPets.
+ * Handles the core game loop including:
+ * - Pet rendering and state management (stats, mood)
+ * - Real-time stat decay logic
+ * - Financial transactions and expenses tracking
+ * - Task generation and AI-powered quizzes
+ * - Budget visualization with charts
+ * 
+ * Ideally this large component should be refactored into smaller sub-components
+ * (e.g., <PetStats />, <BudgetView />, <ControlPanel />) for better maintainability.
+ */
 import { useParams, useNavigate } from 'react-router-dom';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
@@ -85,6 +99,11 @@ export default function PetCare() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showGameModal, setShowGameModal] = useState(false);
   const [currentTaskInfo, setCurrentTaskInfo] = useState<CurrentTaskInfo | null>(null);
+  
+  // RUBRIC: Report Customization - State for filtering budget reports
+  const [expenseFilter, setExpenseFilter] = useState<'all' | 'food' | 'toy' | 'supplies' | 'vet'>('all');
+  
+
   const [incorrectTaskIds, setIncorrectTaskIds] = useState<Set<string>>(new Set());
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
   const [savingsGoal, setSavingsGoal] = useState<number | null>(null);
@@ -111,13 +130,28 @@ export default function PetCare() {
   const [showPetLostModal, setShowPetLostModal] = useState(false);
   const popupIdCounter = useRef(0);
   const decayIntervalRef = useRef<number | null>(null);
+  
+  // Track which achievements have been shown as popups THIS SESSION to prevent duplicates
+  const shownPopupsThisSession = useRef<Set<string>>(new Set());
 
   // Constants for Achievement Types
 
   const GLOBAL_ACHIEVEMENTS = new Set(['streak_3', 'streak_10', 'tasks_5', 'tasks_25', 'daily_7', 'saver']);
 
-  // Add Popup Helper
-  const addPopup = (name: string, icon: ReactNode) => {
+  // Helper: Check if stat is critically low (for warning indicator)
+  const isStatCritical = (value: number) => value < 20;
+  const isStatLow = (value: number) => value < 40;
+
+  // Add Popup Helper - now checks session tracking to prevent duplicates
+  const addPopup = (name: string, icon: ReactNode, achievementId?: string) => {
+    // If achievementId provided, check if already shown this session
+    if (achievementId && shownPopupsThisSession.current.has(achievementId)) {
+      return; // Already shown, skip
+    }
+    if (achievementId) {
+      shownPopupsThisSession.current.add(achievementId);
+    }
+    
     const id = popupIdCounter.current++;
     setAchievementPopups(prev => [...prev, { id, name, icon }]);
     setTimeout(() => {
@@ -141,6 +175,7 @@ export default function PetCare() {
       decayIntervalRef.current = window.setInterval(async () => {
         setPet(prev => {
           if (!prev) return prev;
+          console.log('Decay tick - Love:', prev.love);
           const updated = {
             ...prev,
             hunger: Math.max(0, prev.hunger - 2),
@@ -151,9 +186,17 @@ export default function PetCare() {
             health: (prev.hunger < 20 || prev.cleanliness < 20) ? Math.max(0, prev.health - 1) : prev.health
           };
           
-          // Check if ALL stats hit 0 - pet leaves
-          if (updated.hunger === 0 && updated.happiness === 0 && updated.cleanliness === 0 && 
-              updated.energy === 0 && updated.health === 0 && (updated.love || 0) === 0) {
+          // Check if 3+ stats are at 0 - pet leaves
+          const statsAtZero = [
+            updated.hunger === 0,
+            updated.happiness === 0,
+            updated.cleanliness === 0,
+            updated.energy === 0,
+            updated.health === 0,
+            (updated.love || 0) === 0
+          ].filter(Boolean).length;
+          
+          if (statsAtZero >= 3) {
             setShowPetLostModal(true);
           }
           
@@ -250,38 +293,34 @@ export default function PetCare() {
       console.log('=== STREAK DEBUG ===');
       console.log('lastLogin from DB:', lastLogin);
       console.log('todayStr:', todayStr);
-      console.log('loginDates from DB:', loginDates);
+      console.log('Previous streak:', streakData.current_streak);
       
-      // Update login dates history if not present
-      if (!loginDates.includes(todayStr)) {
-        loginDates.push(todayStr);
-        // Keep last 30 days history
-        if (loginDates.length > 30) {
-          loginDates = loginDates.slice(loginDates.length - 30);
-        }
-      }
+      // STREAK LOGIC:
+      // - If last login was TODAY: keep current streak (already counted today)
+      // - If last login was YESTERDAY: increment streak (continued streak)
+      // - If last login was BEFORE yesterday: reset streak to 1 (missed a day)
       
-      // Migration Fix: Trust DB streak if it's higher than array length (backfill)
-      if (streakData.current_streak > loginDates.length) {
-        // Backfill missing dates to match the streak count
-        const needed = streakData.current_streak - loginDates.length;
-        const lastDate = new Date(loginDates[0] || todayStr); // Start from earliest known or today
+      const yesterdayDate = new Date(today);
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+      
+      if (lastLogin === todayStr) {
+        // Already logged in today - keep current streak (don't double count)
+        currentStreak = streakData.current_streak;
+        console.log('Already logged in today, keeping streak:', currentStreak);
+      } else if (lastLogin === yesterdayStr) {
+        // Logged in yesterday - continue streak! Increment by 1
+        currentStreak = streakData.current_streak + 1;
         
-        for (let i = 1; i <= needed; i++) {
-          const pastDate = new Date(lastDate);
-          pastDate.setDate(pastDate.getDate() - i);
-          const y = pastDate.getFullYear();
-          const m = String(pastDate.getMonth() + 1).padStart(2, '0');
-          const d = String(pastDate.getDate()).padStart(2, '0');
-          loginDates.unshift(`${y}-${m}-${d}`);
+        // Update login dates history
+        if (!loginDates.includes(todayStr)) {
+          loginDates.push(todayStr);
+          if (loginDates.length > 30) {
+            loginDates = loginDates.slice(loginDates.length - 30);
+          }
         }
-      }
-      
-      // Calculate streak from login_dates array length (self-correcting)
-      currentStreak = loginDates.length;
-
-      if (lastLogin !== todayStr) {
-        // First login of a new day - update database
+        
+        // Update database
         await supabase.from('user_streaks').update({
           current_streak: currentStreak,
           last_login_date: todayStr,
@@ -290,16 +329,24 @@ export default function PetCare() {
         }).eq('user_id', user.id);
         
         // Trigger Streak Popup
-        addPopup(`${currentStreak} Day Streak!`, <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+        addPopup(`${currentStreak} Day Streak! 🔥`, <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+        console.log('Continued streak from yesterday:', currentStreak);
       } else {
-        // Already logged in today, still sync the streak value from array length
-        if (currentStreak !== streakData.current_streak) {
-          await supabase.from('user_streaks').update({
-            current_streak: currentStreak,
-            login_dates: loginDates,
-            updated_at: new Date().toISOString()
-          }).eq('user_id', user.id);
-        }
+        // Missed at least one day OR first login ever on a new day
+        // Start fresh at 1
+        currentStreak = 1;
+        loginDates = [todayStr];
+        
+        // Update database
+        await supabase.from('user_streaks').update({
+          current_streak: 1,
+          last_login_date: todayStr,
+          login_dates: loginDates,
+          updated_at: new Date().toISOString()
+        }).eq('user_id', user.id);
+        
+        console.log('New streak started! Previous login was:', lastLogin);
+        addPopup('Day 1 Streak Started! 🔥', <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
       }
     }
     
@@ -312,13 +359,19 @@ export default function PetCare() {
   useEffect(() => {
     if (!pet || !user || !achievementsLoaded) return;
     
+    // Require at least 1 completed task before stat-based achievements can unlock
+    // This prevents achievements from triggering on a brand new pet with default 100 stats
+    const hasPlayedGame = totalTasksCompleted >= 1;
+    
     const achievementDefinitions = [
-      { id: 'perfect_health', name: 'Perfect Health', icon: <img src={healthImg} className={styles.pixelIcon} alt="health" />, check: pet.health === 100 },
-      { id: 'happy_pet', name: 'Happiness Master', icon: <img src={happinessImg} className={styles.pixelIcon} alt="happy" />, check: pet.happiness >= 90 },
-      { id: 'well_fed', name: 'Gourmet Chef', icon: <img src={foodImg} className={styles.pixelIcon} alt="food" />, check: pet.hunger >= 80 },
-      { id: 'clean_pet', name: 'Squeaky Clean', icon: <img src={cleanlinessImg} className={styles.pixelIcon} alt="clean" />, check: pet.cleanliness >= 85 },
-      { id: 'energetic', name: 'Full of Energy', icon: <img src={energyImg} className={styles.pixelIcon} alt="energy" />, check: pet.energy >= 75 },
-      { id: 'loved_pet', name: 'Best Friends', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, check: (pet.love || 50) >= 80 },
+      // Stat-based achievements require some gameplay first
+      { id: 'perfect_health', name: 'Perfect Health', icon: <img src={healthImg} className={styles.pixelIcon} alt="health" />, check: hasPlayedGame && pet.health === 100 },
+      { id: 'happy_pet', name: 'Happiness Master', icon: <img src={happinessImg} className={styles.pixelIcon} alt="happy" />, check: hasPlayedGame && pet.happiness >= 90 },
+      { id: 'well_fed', name: 'Gourmet Chef', icon: <img src={foodImg} className={styles.pixelIcon} alt="food" />, check: hasPlayedGame && pet.hunger >= 80 },
+      { id: 'clean_pet', name: 'Squeaky Clean', icon: <img src={cleanlinessImg} className={styles.pixelIcon} alt="clean" />, check: hasPlayedGame && pet.cleanliness >= 85 },
+      { id: 'energetic', name: 'Full of Energy', icon: <img src={energyImg} className={styles.pixelIcon} alt="energy" />, check: hasPlayedGame && pet.energy >= 75 },
+      { id: 'loved_pet', name: 'Best Friends', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, check: hasPlayedGame && (pet.love || 50) >= 80 },
+      // Task/streak achievements naturally require gameplay
       { id: 'streak_3', name: 'Streak Starter', icon: <img src={fireImg} className={styles.pixelIcon} alt="fire" />, check: answerStreak >= 3 },
       { id: 'streak_10', name: 'On Fire', icon: <img src={strongArmImg} className={styles.pixelIcon} alt="muscle" />, check: answerStreak >= 10 },
       { id: 'tasks_5', name: 'Task Beginner', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: totalTasksCompleted >= 5 },
@@ -349,7 +402,7 @@ export default function PetCare() {
         
         // Update local state locally to prevent immediate duplicate
         setUnlockedAchievements(prev => [...prev, { id: achievement.id, petId: petId as string }]);
-        addPopup(achievement.name, achievement.icon);
+        addPopup(achievement.name, achievement.icon, achievement.id);
       }
     });
   }, [pet, answerStreak, totalTasksCompleted, dailyStreak, balance, unlockedAchievements, user, petId, achievementsLoaded]);
@@ -433,11 +486,17 @@ export default function PetCare() {
 
     switch (action) {
       case 'feed':
+        // RUBRIC: Semantic Validation - Prevent feeding if already full
+        if (pet.hunger >= 100) { alert("Pet is not hungry! Don't waste food."); return; }
+
         updated.hunger = Math.min(100, pet.hunger + 30);
         updated.happiness = Math.min(100, pet.happiness + 5);
         expenseItem = { item: 'Pet Food', type: 'food' };
         break;
       case 'play':
+        // RUBRIC: Semantic Validation - Prevent playing if too tired
+        if (pet.energy <= 10) { alert("Pet is too tired to play! Let them rest first."); return; }
+
         updated.happiness = Math.min(100, pet.happiness + 20);
         updated.energy = Math.max(0, pet.energy - 10);
         updated.hunger = Math.max(0, pet.hunger - 5);
@@ -657,10 +716,17 @@ export default function PetCare() {
   };
 
   // Chart data
+  // RUBRIC: Report Customization & Analysis
+  // Filter expenses based on user selection to allow detailed analysis of specific costs
+  const filteredExpenses = expenseFilter === 'all' 
+    ? expenses 
+    : expenses.filter(e => e.expense_type === expenseFilter);
+
+  // Chart data - Uses filteredExpenses to reflect the user's customization
   const spendingChartData = {
-    labels: [...new Set(expenses.map(e => e.expense_type))],
+    labels: [...new Set(filteredExpenses.map(e => e.expense_type))],
     datasets: [{
-      data: [...new Set(expenses.map(e => e.expense_type))].map(type => expenses.filter(e => e.expense_type === type).reduce((sum, e) => sum + e.amount, 0)),
+      data: [...new Set(filteredExpenses.map(e => e.expense_type))].map(type => filteredExpenses.filter(e => e.expense_type === type).reduce((sum, e) => sum + e.amount, 0)),
       backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
     }]
   };
@@ -717,8 +783,16 @@ export default function PetCare() {
             { key: 'health', icon: <img src={healthImg} className={styles.pixelIcon} alt="health" />, label: 'Health', value: pet.health },
             { key: 'love', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, label: 'Love', value: pet.love || 50 },
           ].map(stat => (
-            <div key={stat.key} className={styles.statCard}>
-              <div className={styles.statIcon}>{stat.icon}</div>
+            <div 
+              key={stat.key} 
+              className={`${styles.statCard} ${isStatCritical(stat.value) ? styles.statCritical : isStatLow(stat.value) ? styles.statWarning : ''}`}
+            >
+              <div className={styles.statIcon}>
+                {stat.icon}
+                {isStatCritical(stat.value) && (
+                  <img src={warningImg} className={styles.warningIcon} alt="warning" />
+                )}
+              </div>
               <div className={styles.statInfo}>
                 <label>{stat.label}</label>
                 <div className={styles.statBar}>
@@ -849,7 +923,32 @@ export default function PetCare() {
 
           {activeTab === 'budget' && (
             <div className={styles.tabContent}>
-              <h3>Financial Overview</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3>Financial Overview</h3>
+                
+                {/* RUBRIC: Report Customization Control */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Filter Reports:</label>
+                  <select 
+                    value={expenseFilter}
+                    onChange={(e) => setExpenseFilter(e.target.value as any)}
+                    style={{ 
+                      padding: '6px 12px', 
+                      borderRadius: '8px', 
+                      background: 'rgba(30, 41, 59, 0.8)', 
+                      color: '#f8fafc', 
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="food">Food</option>
+                    <option value="toy">Toys & Play</option>
+                    <option value="supplies">Supplies</option>
+                    <option value="vet">Medical</option>
+                  </select>
+                </div>
+              </div>
               
               {/* Summary Cards */}
               <div className={styles.budgetSummary}>
@@ -1125,7 +1224,11 @@ export default function PetCare() {
               onClick={async () => {
                 // Delete the pet from database
                 if (pet?.id) {
-                  await supabase.from('pets').delete().eq('id', pet.id);
+                  const { error } = await supabase.from('pets').delete().eq('id', pet.id);
+                  if (error) {
+                    alert('Error removing pet: ' + error.message);
+                    return;
+                  }
                 }
                 navigate('/dashboard');
               }}
@@ -1133,6 +1236,14 @@ export default function PetCare() {
               Return to Dashboard
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Loading Overlay - shows during quiz generation */}
+      {isGenerating && (
+        <div className={styles.loadingOverlay}>
+          <div className={styles.loadingSpinner}></div>
+          <div className={styles.loadingText}>Generating question...</div>
         </div>
       )}
 

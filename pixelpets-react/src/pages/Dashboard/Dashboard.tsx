@@ -70,15 +70,44 @@ export default function Dashboard() {
       return;
     }
 
+    // Check if user has enough balance ($50 to adopt a pet)
+    const PET_COST = 50;
+    if (balance < PET_COST) {
+      alert(`Not enough money! You need $${PET_COST} to adopt a pet. Current balance: $${balance.toFixed(2)}`);
+      return;
+    }
+
     setIsCreating(true);
+
+    // Deduct the pet adoption cost
+    const { error: financeError } = await supabase.from('user_finances').update({
+      balance: balance - PET_COST
+    }).eq('user_id', user.id);
+
+    if (financeError) {
+      alert('Error processing payment: ' + financeError.message);
+      setIsCreating(false);
+      return;
+    }
 
     const { error } = await supabase.from('pets').insert({
       name: petName,
       species: petSpecies,
-      owner_id: user.id
+      owner_id: user.id,
+      // Start all stats at 50% so no achievements are auto-completed
+      hunger: 50,
+      happiness: 50,
+      energy: 50,
+      cleanliness: 50,
+      health: 50,
+      love: 50
     });
 
     if (error) {
+      // Refund if pet creation failed
+      await supabase.from('user_finances').update({
+        balance: balance
+      }).eq('user_id', user.id);
       alert('Error creating pet: ' + error.message);
     } else {
       setPetName('');
@@ -164,10 +193,15 @@ export default function Dashboard() {
                   <option value="fish">Fish</option>
                   <option value="mouse">Mouse</option>
                 </select>
-                <button type="submit" className={styles.createBtn} disabled={isCreating}>
-                  {isCreating ? 'Creating...' : 'Create'}
+                <button type="submit" className={styles.createBtn} disabled={isCreating || balance < 50}>
+                  {isCreating ? 'Adopting...' : 'Adopt ($50)'}
                 </button>
               </div>
+              {balance < 50 && (
+                <p style={{ color: '#ef4444', marginTop: '12px', fontSize: '0.9rem' }}>
+                  ⚠️ You need $50 to adopt a pet. Complete tasks to earn more!
+                </p>
+              )}
             </form>
           )}
 
