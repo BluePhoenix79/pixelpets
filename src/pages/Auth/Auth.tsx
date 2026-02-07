@@ -1,12 +1,10 @@
-
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import dogImg from '../../assets/dog.png';
 import catImg from '../../assets/cat.png';
 import birdImg from '../../assets/bird.png';
-import fishImg from '../../assets/fish.png';
-import mouseImg from '../../assets/mouse.png';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import styles from './Auth.module.css';
 
 type AuthTab = 'login' | 'signup';
@@ -22,24 +20,21 @@ export default function Auth() {
   const [loginPassword, setLoginPassword] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
-  const [loginMessage, setLoginMessage] = useState<MessageState>({ text: '', type: '' });
-  const [signupMessage, setSignupMessage] = useState<MessageState>({ text: '', type: '' });
+  const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
   
   const { signIn, signUp } = useAuth();
-  const navigate = useNavigate();
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    setLoginMessage({ text: '', type: '' });
+    setMessage({ text: '', type: '' });
     setIsLoading(true);
 
     const { error } = await signIn(loginEmail, loginPassword);
 
     if (error) {
-      setLoginMessage({ text: error.message, type: 'error' });
+      setMessage({ text: error.message, type: 'error' });
     } else {
-      setLoginMessage({ text: 'Login successful!', type: 'success' });
       navigate('/dashboard');
     }
     setIsLoading(false);
@@ -47,10 +42,10 @@ export default function Auth() {
 
   const handleSignup = async (e: FormEvent) => {
     e.preventDefault();
-    setSignupMessage({ text: '', type: '' });
+    setMessage({ text: '', type: '' });
 
     if (signupPassword.length < 6) {
-      setSignupMessage({ text: 'Password must be at least 6 characters', type: 'error' });
+      setMessage({ text: 'Password must be at least 6 characters', type: 'error' });
       return;
     }
 
@@ -58,39 +53,60 @@ export default function Auth() {
     const { error } = await signUp(signupEmail, signupPassword);
 
     if (error) {
-      setSignupMessage({ text: error.message, type: 'error' });
+      setMessage({ text: error.message, type: 'error' });
     } else {
-      setSignupMessage({ text: 'Account created! Logging you in...', type: 'success' });
+      setMessage({ text: 'Account created! Logging you in...', type: 'success' });
       navigate('/dashboard');
     }
     setIsLoading(false);
   };
 
+  const handleGoogleLogin = async () => {
+    console.log("Initiating Google Login...");
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+      if (error) {
+        console.error("Google Auth Error:", error);
+        throw error;
+      }
+    } catch (error: any) {
+      console.error("Catch Error:", error);
+      setMessage({ text: `Auth Error: ${error.message || 'Check console'}`, type: 'error' });
+    }
+  };
+
   return (
     <div className={styles.authPage}>
-      <header className="title">
-        <h1>PixelPets</h1>
-        <div className="pet-icons">
-          <img src={dogImg} className="pet-icon" alt="dog" style={{ width: '48px', height: '48px' }} />
-          <img src={catImg} className="pet-icon" alt="cat" style={{ width: '48px', height: '48px' }} />
-          <img src={birdImg} className="pet-icon" alt="bird" style={{ width: '48px', height: '48px' }} />
-          <img src={fishImg} className="pet-icon" alt="fish" style={{ width: '48px', height: '48px' }} />
-          <img src={mouseImg} className="pet-icon" alt="mouse" style={{ width: '48px', height: '48px' }} />
-        </div>
-      </header>
+      <div className={styles.splitScreen}>
+        
+        {/* Left Panel - Auth Form */}
+        <div className={styles.leftPanel}>
+          <div className={styles.authHeader}>
+            <div className={styles.petIcons}>
+               <img src={dogImg} className={styles.petIcon} alt="dog" style={{ animationDelay: '0s' }} />
+               <img src={catImg} className={styles.petIcon} alt="cat" style={{ animationDelay: '1s' }} />
+               <img src={birdImg} className={styles.petIcon} alt="bird" style={{ animationDelay: '2s' }} />
+            </div>
+            <h1>PixelPets</h1>
+            <p className={styles.subtitle}>Your digital companion awaits</p>
+          </div>
 
-      <main>
-        <section className="controls" aria-label="Authentication">
-          <div className={styles.authTabs}>
+          <div className={`${styles.authTabs} ${activeTab === 'signup' ? styles.switched : ''}`}>
+            <div className={styles.tabSlider} style={{ transform: activeTab === 'login' ? 'translateX(0)' : 'translateX(100%)' }} />
             <button 
               className={`${styles.tabBtn} ${activeTab === 'login' ? styles.active : ''}`}
-              onClick={() => setActiveTab('login')}
+              onClick={() => { setActiveTab('login'); setMessage({ text: '', type: '' }); }}
             >
               Login
             </button>
             <button 
               className={`${styles.tabBtn} ${activeTab === 'signup' ? styles.active : ''}`}
-              onClick={() => setActiveTab('signup')}
+              onClick={() => { setActiveTab('signup'); setMessage({ text: '', type: '' }); }}
             >
               Sign Up
             </button>
@@ -98,58 +114,52 @@ export default function Auth() {
 
           {activeTab === 'login' && (
             <form className={styles.authForm} onSubmit={handleLogin}>
-              <div className="form-group">
-                <label htmlFor="login-email">Email</label>
+              <div className={styles.formGroup}>
+                <label htmlFor="login-email">EMAIL</label>
                 <input 
                   id="login-email" 
                   type="email" 
                   required 
-                  placeholder="Enter your email"
+                  placeholder="name@example.com"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="login-password">Password</label>
+              <div className={styles.formGroup}>
+                <label htmlFor="login-password">PASSWORD</label>
                 <input 
                   id="login-password" 
                   type="password" 
                   required 
-                  placeholder="Enter your password"
+                  placeholder="••••••••"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                 />
               </div>
 
               <button type="submit" className={styles.submitBtn} disabled={isLoading}>
-                {isLoading ? 'Logging in...' : 'Login'}
+                {isLoading ? 'Logging in...' : 'Sign In'}
               </button>
-              
-              {loginMessage.text && (
-                <div className={`message ${loginMessage.type}`}>
-                  {loginMessage.text}
-                </div>
-              )}
             </form>
           )}
 
           {activeTab === 'signup' && (
             <form className={styles.authForm} onSubmit={handleSignup}>
-              <div className="form-group">
-                <label htmlFor="signup-email">Email</label>
+              <div className={styles.formGroup}>
+                <label htmlFor="signup-email">EMAIL</label>
                 <input 
                   id="signup-email" 
                   type="email" 
                   required 
-                  placeholder="Enter your email"
+                  placeholder="name@example.com"
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="signup-password">Password</label>
+              <div className={styles.formGroup}>
+                <label htmlFor="signup-password">PASSWORD</label>
                 <input 
                   id="signup-password" 
                   type="password" 
@@ -163,16 +173,57 @@ export default function Auth() {
               <button type="submit" className={styles.submitBtn} disabled={isLoading}>
                 {isLoading ? 'Creating account...' : 'Create Account'}
               </button>
-              
-              {signupMessage.text && (
-                <div className={`message ${signupMessage.type}`}>
-                  {signupMessage.text}
-                </div>
-              )}
             </form>
           )}
-        </section>
-      </main>
+
+          {message.text && (
+            <div className={`${styles.message} ${styles[message.type]}`}>
+              {message.text}
+            </div>
+          )}
+
+          <div className={styles.divider}>OR</div>
+
+          <button 
+            onClick={handleGoogleLogin}
+            className={styles.googleBtn}
+            type="button"
+          >
+            <img 
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+              alt="Google" 
+              className={styles.googleIcon} 
+            />
+            Sign in with Google
+          </button>
+        </div>
+
+        {/* Right Panel - Hero / Game Preview */}
+        <div className={styles.rightPanel}>
+          <div className={styles.heroContent}>
+            {activeTab === 'login' ? (
+              <>
+                <h2 key="login-title" className={styles.fadeText}>Welcome Back!</h2>
+                <p key="login-desc" className={styles.fadeText}>Adopt, feed, and play with your own digital pets.</p>
+                <div className={styles.heroDecor}>
+                   <div className={styles.decorCircle}></div>
+                   <img key="login-pet" src={dogImg} className={styles.heroPet} alt="Hero Dog" />
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 key="signup-title" className={styles.fadeText}>Join the Adventure!</h2>
+                <p key="signup-desc" className={styles.fadeText}>Start your journey and collect unique pixel pets today.</p>
+                <div className={styles.heroDecor}>
+                   <div className={styles.decorCircle}></div>
+                   <img key="signup-pet" src={catImg} className={styles.heroPet} alt="Hero Cat" />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

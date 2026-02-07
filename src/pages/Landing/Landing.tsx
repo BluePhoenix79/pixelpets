@@ -60,9 +60,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <Link to="/auth" className={styles.playButton}>
-            START GAME
-          </Link>
+
           
           <div className={styles.scrollIndicator}>
             <span>SCROLL FOR INFO</span>
@@ -96,7 +94,10 @@ export default function Landing() {
 
         <div className={styles.ctaSection}>
            <h2>READY TO PLAY?</h2>
-           <Link to="/auth" className={styles.secondaryButton}>CREATE ACCOUNT</Link>
+           <div className={styles.ctaButtons}>
+             <Link to="/auth" className={styles.secondaryButton} state={{ mode: 'signup' }}>CREATE ACCOUNT</Link>
+             <Link to="/auth" className={styles.secondaryOutlineButton} state={{ mode: 'login' }}>LOG IN</Link>
+           </div>
         </div>
       </section>
       

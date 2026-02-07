@@ -151,8 +151,19 @@ async function generateDirectWithRotation(category: string, type: AIRequestType)
   return await generateViaSupabase(category, type);
 }
 
+// Difficulty Preference
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+export function getDifficulty(): Difficulty {
+  return (localStorage.getItem('ai_difficulty') as Difficulty) || 'medium';
+}
+
+export function setDifficulty(diff: Difficulty): void {
+  localStorage.setItem('ai_difficulty', diff);
+}
+
 /**
- * Try to generate with a specific model - EASIER questions
+ * Try to generate with a specific model
  */
 async function tryGenerateWithModel(
   model: string, 
@@ -161,17 +172,28 @@ async function tryGenerateWithModel(
 ): Promise<{ success: boolean; data?: MiniGame; status?: number }> {
   try {
     let prompt = "";
+    const difficulty = getDifficulty();
     
+    // Difficulty Strings
+    const levelDesc = {
+      easy: "very simple, beginner-level, clear and easy to understand",
+      medium: "standard difficulty, intermediate level",
+      hard: "challenging, advanced level, requires deep understanding"
+    };
+
     if (type === 'budget_puzzle') {
-       prompt = `Generate a creative "Budget Puzzle" scenario about ${category}. 
+       prompt = `Generate a creative "${difficulty}" difficulty "Budget Puzzle" scenario about ${category}. 
         User has a Total Budget. Provide a list of items (some essential, some not). 
         The sum of ESSENTIAL items must be <= Total Budget. 
         Total Budget should be between $50 and $500.
+        ${difficulty === 'easy' ? 'Keep math simple (multiples of 10).' : ''}
+        ${difficulty === 'hard' ? 'Make the budget tight and choices tricky.' : ''}
         Return ONLY valid JSON:
         {"type":"budget_puzzle","scenario":"You are planning X...","totalBudget":100,"items":[{"name":"Item A","cost":20,"essential":true},{"name":"Luxury Item","cost":50,"essential":false}],"correctEssentials":["Item A"]}`;
     } else {
-        // Default Trivia
+        // Trivia
         prompt = `Generate a UNIQUE and RANDOM trivia question about ${category}.
+        Difficulty Level: ${difficulty.toUpperCase()} (${levelDesc[difficulty]}).
         Do not repeat common questions.
         Return ONLY valid JSON with no markdown, no backticks, no extra text:
         {"type":"trivia","question":"Question?","options":["A","B","C","D"],"answer":0,"explanation":"Why correct","category":"${category}"}`;

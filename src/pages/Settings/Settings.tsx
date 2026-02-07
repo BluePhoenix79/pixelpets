@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import type { Pet, ThemePreference } from '../../types';
-import { QUESTION_TOPICS, getQuestionTopic, setQuestionTopic, getCustomTopic, setCustomTopic } from '../../lib/ai';
+import { QUESTION_TOPICS, getQuestionTopic, setQuestionTopic, getCustomTopic, setCustomTopic, getDifficulty, setDifficulty, Difficulty } from '../../lib/ai';
 import styles from './Settings.module.css';
 import settingImg from '../../assets/setting.png';
 
@@ -20,6 +20,7 @@ export default function Settings() {
   const [message, setMessage] = useState({ text: '', type: '' as 'success' | 'error' | '' });
   const [questionTopic, setQuestionTopicState] = useState(getQuestionTopic());
   const [customTopic, setCustomTopicState] = useState(getCustomTopic());
+  const [difficulty, setDifficultyState] = useState<Difficulty>(getDifficulty());
 
   useEffect(() => {
     if (user) {
@@ -55,6 +56,11 @@ export default function Settings() {
   const handleCustomTopicChange = (topic: string) => {
     setCustomTopicState(topic);
     setCustomTopic(topic);
+  };
+
+  const handleDifficultyChange = (diff: Difficulty) => {
+    setDifficultyState(diff);
+    setDifficulty(diff);
   };
 
   const handleLogout = async () => {
@@ -144,6 +150,7 @@ export default function Settings() {
       <div className="user-info" style={{ justifyContent: 'center' }}>
         <div className="user-bar-buttons">
           <button className="user-bar-btn" onClick={() => navigate('/dashboard')}>Home</button>
+          <button className="user-bar-btn" onClick={() => navigate(-1)}>Back to Pet</button>
           <button className="user-bar-btn" onClick={handleLogout}>Logout</button>
         </div>
       </div>
@@ -276,6 +283,19 @@ export default function Settings() {
                 />
               </div>
             )}
+
+            <div className="form-group" style={{ marginTop: '16px' }}>
+              <label htmlFor="difficulty-select">Difficulty</label>
+              <select 
+                id="difficulty-select"
+                value={difficulty}
+                onChange={(e) => handleDifficultyChange(e.target.value as Difficulty)}
+              >
+                <option value="easy">Easy (Beginner)</option>
+                <option value="medium">Medium (Standard)</option>
+                <option value="hard">Hard (Advanced)</option>
+              </select>
+            </div>
           </div>
         </div>
       </main>

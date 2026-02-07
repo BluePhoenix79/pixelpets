@@ -342,6 +342,59 @@
     font-size: 0.9rem;
 }
 
+.authButtons {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.loginButton {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    text-decoration: none;
+    font-size: 1.6rem;
+    font-weight: 700;
+    padding: 1.2rem 3.5rem;
+    border-radius: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.loginButton:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: white;
+    transform: translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.ctaButtons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.secondaryOutlineButton {
+    display: inline-block;
+    background: transparent;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #cbd5e1;
+    font-weight: 700;
+    font-size: 1.2rem;
+    padding: 1rem 3rem;
+    border-radius: 50px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.secondaryOutlineButton:hover {
+    border-color: white;
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
 @media (max-width: 768px) {
     .mainTitle { font-size: 3rem; }
     .heroSection { height: auto; min-height: 100vh; padding: 4rem 1rem; }

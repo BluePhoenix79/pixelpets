@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 /**
  * PetCare.tsx
  * 
@@ -13,9 +12,11 @@ import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
  * Ideally this large component should be refactored into smaller sub-components
  * (e.g., <PetStats />, <BudgetView />, <ControlPanel />) for better maintainability.
  */
+
+import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
+
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { decreaseBalance, ensureFinance } from '../../lib/finances';
@@ -23,6 +24,11 @@ import { getRandomGame, type MiniGame } from '../../data/miniGames';
 import GameModal from '../../components/GameModal/GameModal';
 import type { Pet, PetSpecies, Expense, Task, ActionType } from '../../types';
 import { generateAIQuestion } from '../../lib/ai';
+import { PetStats } from '../../components/PetStats/PetStats';
+import { ActionButtons } from '../../components/ActionButtons/ActionButtons';
+import { BudgetReport } from '../../components/BudgetReport/BudgetReport';
+import { FunLoader } from '../../components/FunLoader/FunLoader';
+import { openMysteryBox, formatDbName, parseToyItem, RARITY_COLORS } from '../../lib/toySystem';
 import styles from './PetCare.module.css';
 import dogImg from '../../assets/dog.png';
 import happinessImg from '../../assets/happiness.png';
@@ -30,12 +36,9 @@ import healthImg from '../../assets/heart.png';
 import energyImg from '../../assets/lightning.png';
 import cleanlinessImg from '../../assets/cleanliness.png';
 import loveImg from '../../assets/love.png';
-import playImg from '../../assets/play.png';
-import cleanImg from '../../assets/clean.png';
-import restImg from '../../assets/rest.png';
+
 import foodImg from '../../assets/food.png';
 import vetImg from '../../assets/vet.png';
-import toyImg from '../../assets/toy.png';
 import brightSmileImg from '../../assets/bright_smile.png';
 import nauseatedImg from '../../assets/nauseated.png';
 import sleepyImg from '../../assets/sleepy.png';
@@ -50,7 +53,6 @@ import starImg from '../../assets/star.png';
 import trophyImg from '../../assets/trophy.png';
 import calendarImg from '../../assets/calendar.png';
 import moneyBagImg from '../../assets/money_bag.png';
-import expensesImg from '../../assets/expenses.png';
 import checkmarkImg from '../../assets/checkmark.png';
 import warningImg from '../../assets/warning.png';
 import bathImg from '../../assets/bath.png';
@@ -75,7 +77,7 @@ const COSTS: Record<ActionType, number> = {
   feed: 10, play: 5, clean: 8, rest: 0, vet: 50, toy: 25
 };
 
-type TabType = 'expenses' | 'tasks' | 'budget' | 'achievements' | 'streak';
+type TabType = 'expenses' | 'tasks' | 'budget' | 'achievements' | 'streak' | 'toybox';
 
 interface CurrentTaskInfo {
   id: string;
@@ -100,14 +102,9 @@ export default function PetCare() {
   const [showGameModal, setShowGameModal] = useState(false);
   const [currentTaskInfo, setCurrentTaskInfo] = useState<CurrentTaskInfo | null>(null);
   
-  // RUBRIC: Report Customization - State for filtering budget reports
-  const [expenseFilter, setExpenseFilter] = useState<'all' | 'food' | 'toy' | 'supplies' | 'vet'>('all');
-  
-
   const [incorrectTaskIds, setIncorrectTaskIds] = useState<Set<string>>(new Set());
   const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
   const [savingsGoal, setSavingsGoal] = useState<number | null>(null);
-  const [savingsGoalInput, setSavingsGoalInput] = useState('');
   
   // Achievements State
   // Store objects { id: string, petId: string } to know context
@@ -117,7 +114,7 @@ export default function PetCare() {
   const [loginDates, setLoginDates] = useState<string[]>([]);
   const [totalTasksCompleted, setTotalTasksCompleted] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatingTaskId, setGeneratingTaskId] = useState<string | null>(null);
+  const [hasNewToy, setHasNewToy] = useState(false); // New state for tab highlight
   
   // Stacking Popups State
   interface PopupItem {
@@ -138,9 +135,7 @@ export default function PetCare() {
 
   const GLOBAL_ACHIEVEMENTS = new Set(['streak_3', 'streak_10', 'tasks_5', 'tasks_25', 'daily_7', 'saver']);
 
-  // Helper: Check if stat is critically low (for warning indicator)
-  const isStatCritical = (value: number) => value < 20;
-  const isStatLow = (value: number) => value < 40;
+
 
   // Add Popup Helper - now checks session tracking to prevent duplicates
   const addPopup = (name: string, icon: ReactNode, achievementId?: string) => {
@@ -517,8 +512,14 @@ export default function PetCare() {
         expenseItem = { item: 'Veterinary Care', type: 'vet' };
         break;
       case 'toy':
-        updated.happiness = Math.min(100, pet.happiness + 30);
-        expenseItem = { item: 'New Toy', type: 'toy' };
+        // Mystery Box Logic
+        const toy = openMysteryBox();
+        updated.happiness = Math.min(100, pet.happiness + 15); // Less happiness direct, more from item
+        expenseItem = { item: formatDbName(toy), type: 'toy' }; 
+        addPopup(`Unboxed: ${toy.name}!`, <span>{toy.icon}</span>);
+        // Highlight Toy Box tab instead of switching immediately
+        setHasNewToy(true);
+        // setActiveTab('toybox'); // Removed auto-switch to let user discover
         break;
     }
 
@@ -560,7 +561,6 @@ export default function PetCare() {
     if (incorrectTaskIds.has(task.id) || completedTaskIds.has(task.id)) return;
     
     setIsGenerating(true);
-    setGeneratingTaskId(task.id);
 
     try {
       // PROMPT: Randomly choose between Trivia and Budget Puzzle for variety
@@ -591,7 +591,6 @@ export default function PetCare() {
       setShowGameModal(true);
     } finally {
       setIsGenerating(false);
-      setGeneratingTaskId(null);
     }
   };
 
@@ -636,14 +635,10 @@ export default function PetCare() {
     // Don't reload tasks - keep showing completed ones
   };
 
-  const setSavingsGoalHandler = async () => {
-    if (!user || !petId || !savingsGoalInput) return;
-    const amount = parseFloat(savingsGoalInput);
-    if (isNaN(amount) || amount <= 0) return;
-
+  const handleSetSavingsGoal = async (amount: number) => {
+    if (!user || !petId || amount <= 0) return;
     await supabase.from('savings_goals').insert({ user_id: user.id, pet_id: petId, target_amount: amount });
     setSavingsGoal(amount);
-    setSavingsGoalInput('');
   };
 
   const handleLogout = async () => {
@@ -700,11 +695,7 @@ export default function PetCare() {
     return <span>Not doing well, needs care soon! <StatusIcon src={warningImg} alt="warning" /></span>;
   }, [pet]);
 
-  const getStatColor = (value: number) => {
-    if (value < 30) return 'linear-gradient(90deg, #dc2626, #ef4444)';
-    if (value < 60) return 'linear-gradient(90deg, #f59e0b, #fbbf24)';
-    return 'linear-gradient(90deg, var(--fbla-blue-600), var(--fbla-gold))';
-  };
+
 
   const isAchievementUnlocked = (id: string) => {
     const isGlobal = GLOBAL_ACHIEVEMENTS.has(id);
@@ -718,18 +709,18 @@ export default function PetCare() {
   // Chart data
   // RUBRIC: Report Customization & Analysis
   // Filter expenses based on user selection to allow detailed analysis of specific costs
-  const filteredExpenses = expenseFilter === 'all' 
-    ? expenses 
-    : expenses.filter(e => e.expense_type === expenseFilter);
 
-  // Chart data - Uses filteredExpenses to reflect the user's customization
-  const spendingChartData = {
-    labels: [...new Set(filteredExpenses.map(e => e.expense_type))],
-    datasets: [{
-      data: [...new Set(filteredExpenses.map(e => e.expense_type))].map(type => filteredExpenses.filter(e => e.expense_type === type).reduce((sum, e) => sum + e.amount, 0)),
-      backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-    }]
-  };
+
+  // Balance Animation State
+  const [balanceKey, setBalanceKey] = useState(0);
+  const prevBalance = useRef(balance);
+
+  useEffect(() => {
+    if (balance > prevBalance.current) {
+      setBalanceKey(prev => prev + 1);
+    }
+    prevBalance.current = balance;
+  }, [balance]);
 
   if (!pet) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
@@ -746,7 +737,7 @@ export default function PetCare() {
 
       <div className="user-info">
         <div className="balance-display">
-          Balance: <span className="balance-amount">${balance.toFixed(2)}</span>
+          Balance: <span key={balanceKey} className={`balance-amount ${balanceKey > 0 ? styles.balancePulse : ''}`}>${balance.toFixed(2)}</span>
         </div>
         <div className="user-bar-buttons">
           <button className="user-bar-btn" onClick={() => navigate('/dashboard')}>Home</button>
@@ -771,64 +762,22 @@ export default function PetCare() {
           </div>
           <h2>{pet.name}</h2>
           <p className={styles.petStatus}>{getPetStatus()}</p>
+          
+          {/* Fun Feature: Inventory Shelf */}
+
         </div>
 
         {/* Stats Grid - 6 stats for perfect 2x3 or 3x2 grid */}
-        <div className={styles.statsGrid}>
-          {[
-            { key: 'hunger', icon: <img src={foodImg} className={styles.pixelIcon} alt="food" />, label: 'Hunger', value: pet.hunger },
-            { key: 'happiness', icon: <img src={happinessImg} className={styles.pixelIcon} alt="happiness" />, label: 'Happiness', value: pet.happiness },
-            { key: 'energy', icon: <img src={energyImg} className={styles.pixelIcon} alt="energy" />, label: 'Energy', value: pet.energy },
-            { key: 'cleanliness', icon: <img src={cleanlinessImg} className={styles.pixelIcon} alt="cleanliness" />, label: 'Cleanliness', value: pet.cleanliness },
-            { key: 'health', icon: <img src={healthImg} className={styles.pixelIcon} alt="health" />, label: 'Health', value: pet.health },
-            { key: 'love', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, label: 'Love', value: pet.love || 50 },
-          ].map(stat => (
-            <div 
-              key={stat.key} 
-              className={`${styles.statCard} ${isStatCritical(stat.value) ? styles.statCritical : isStatLow(stat.value) ? styles.statWarning : ''}`}
-            >
-              <div className={styles.statIcon}>
-                {stat.icon}
-                {isStatCritical(stat.value) && (
-                  <img src={warningImg} className={styles.warningIcon} alt="warning" />
-                )}
-              </div>
-              <div className={styles.statInfo}>
-                <label>{stat.label}</label>
-                <div className={styles.statBar}>
-                  <div className={styles.statFill} style={{ width: `${stat.value}%`, background: getStatColor(stat.value) }} />
-                </div>
-                <span>{stat.value}/100</span>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Stats Grid - Modularized */}
+        <PetStats pet={pet} />
 
         {/* Actions Section */}
-        <div className={styles.actionsSection}>
-          <h3>Care Actions</h3>
-          <div className={styles.actionsGrid}>
-            {[
-              { action: 'feed' as ActionType, icon: <img src={foodImg} className={styles.pixelIcon} alt="feed" />, name: 'Feed', cost: 10 },
-              { action: 'play' as ActionType, icon: <img src={playImg} className={styles.pixelIcon} alt="play" />, name: 'Play', cost: 5 },
-              { action: 'clean' as ActionType, icon: <img src={cleanImg} className={styles.pixelIcon} alt="clean" />, name: 'Clean', cost: 8 },
-              { action: 'rest' as ActionType, icon: <img src={restImg} className={styles.pixelIcon} alt="rest" />, name: 'Rest', cost: 0 },
-              { action: 'vet' as ActionType, icon: <img src={vetImg} className={styles.pixelIcon} alt="vet" />, name: 'Vet', cost: 50 },
-              { action: 'toy' as ActionType, icon: <img src={toyImg} className={styles.pixelIcon} alt="toy" />, name: 'Buy Toy', cost: 25 },
-            ].map(btn => (
-              <button 
-                key={btn.action} 
-                className={styles.actionBtn} 
-                onClick={() => performAction(btn.action)}
-                disabled={btn.cost > balance}
-              >
-                <span className={styles.actionIcon}>{btn.icon}</span>
-                <span className={styles.actionName}>{btn.name}</span>
-                <span className={styles.actionCost}>{btn.cost === 0 ? 'Free' : `$${btn.cost}`}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Actions Section - Modularized */}
+        <ActionButtons 
+          balance={balance} 
+          onAction={performAction} 
+          disabled={isGenerating} 
+        />
 
         {/* Tabs Section */}
         <div className={styles.tabsSection}>
@@ -837,13 +786,17 @@ export default function PetCare() {
               { id: 'expenses' as TabType, label: 'Expenses' },
               { id: 'tasks' as TabType, label: 'Tasks' },
               { id: 'budget' as TabType, label: 'Budget' },
+              { id: 'toybox' as TabType, label: 'Toy Box' }, 
               { id: 'achievements' as TabType, label: 'Achievements' },
               { id: 'streak' as TabType, label: 'Streak' },
             ].map(tab => (
               <button 
                 key={tab.id} 
-                className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`}
-                onClick={() => setActiveTab(tab.id)}
+                className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''} ${tab.id === 'toybox' && hasNewToy ? styles.pulseTab : ''}`}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id === 'toybox') setHasNewToy(false);
+                }}
               >
                 {tab.label}
               </button>
@@ -868,6 +821,54 @@ export default function PetCare() {
                   ))
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === 'toybox' && (
+            <div className={styles.tabContent}>
+               <h3>My Toy Collection</h3>
+               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '16px' }}>
+                 {expenses.filter(e => e.expense_type === 'toy').length === 0 ? (
+                   <div className={styles.noData} style={{ gridColumn: '1 / -1' }}>No toys yet! Buy a Mystery Box to start collecting.</div>
+                 ) : (
+                   expenses.filter(e => e.expense_type === 'toy').map(expense => {
+                     const toy = parseToyItem(expense.item_name);
+                     const color = RARITY_COLORS[toy.rarity];
+                     return (
+                       <div 
+                         key={expense.id} 
+                         title={`${toy.name} (${toy.rarity})`} // Tooltip
+                         style={{ 
+                           background: 'rgba(15, 23, 42, 0.4)', 
+                           borderRadius: '12px', 
+                           padding: '16px', 
+                           border: `2px solid ${color}`,
+                           display: 'flex', 
+                           flexDirection: 'column', 
+                           alignItems: 'center', 
+                           gap: '8px',
+                           boxShadow: `0 0 15px ${color}40`,
+                           position: 'relative',
+                           cursor: 'help'
+                         }}
+                       >
+                         <div style={{ fontSize: '2.5rem' }}>{toy.icon}</div>
+                         <div style={{ fontWeight: 600, fontSize: '0.9rem', textAlign: 'center', color: '#f8fafc' }}>{toy.name}</div>
+                         <div style={{ 
+                           fontSize: '0.75rem', 
+                           background: color, 
+                           color: toy.rarity === 'Common' || toy.rarity === 'Legendary' ? 'black' : 'white',
+                           padding: '2px 8px', 
+                           borderRadius: '10px',
+                           fontWeight: 700
+                         }}>
+                           {toy.rarity}
+                         </div>
+                       </div>
+                     );
+                   })
+                 )}
+               </div>
             </div>
           )}
 
@@ -922,122 +923,13 @@ export default function PetCare() {
           )}
 
           {activeTab === 'budget' && (
-            <div className={styles.tabContent}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3>Financial Overview</h3>
-                
-                {/* RUBRIC: Report Customization Control */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <label style={{ fontSize: '0.9rem', color: '#94a3b8' }}>Filter Reports:</label>
-                  <select 
-                    value={expenseFilter}
-                    onChange={(e) => setExpenseFilter(e.target.value as any)}
-                    style={{ 
-                      padding: '6px 12px', 
-                      borderRadius: '8px', 
-                      background: 'rgba(30, 41, 59, 0.8)', 
-                      color: '#f8fafc', 
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="food">Food</option>
-                    <option value="toy">Toys & Play</option>
-                    <option value="supplies">Supplies</option>
-                    <option value="vet">Medical</option>
-                  </select>
-                </div>
-              </div>
-              
-              {/* Summary Cards */}
-              <div className={styles.budgetSummary}>
-                <div className={styles.budgetCard}>
-                  <div className={styles.budgetCardIcon}><img src={moneyBagImg} className={styles.pixelIcon} alt="balance" style={{ width: '48px', height: '48px' }} /></div>
-                  <div className={styles.budgetCardInfo}>
-                    <span className={styles.budgetLabel}>Current Balance</span>
-                    <span className={styles.budgetValue}>${balance.toFixed(2)}</span>
-                  </div>
-                </div>
-                <div className={styles.budgetCard}>
-                  <div className={styles.budgetCardIcon}><img src={expensesImg} className={styles.pixelIcon} alt="expenses" style={{ width: '48px', height: '48px' }} /></div>
-                  <div className={styles.budgetCardInfo}>
-                    <span className={styles.budgetLabel}>Total Spent</span>
-                    <span className={styles.budgetValueRed}>-${totalSpent.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Charts Section */}
-              <div className={styles.budgetChartsGrid}>
-                {/* Spending Chart */}
-                <div className={styles.budgetChartCard}>
-                  <h4>Spending by Category</h4>
-                  <div className={styles.chartWrapper}>
-                    {expenses.length > 0 ? (
-                      <Pie data={spendingChartData} options={{ plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af' } } } }} />
-                    ) : (
-                      <div className={styles.noChartData}>No spending data yet</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Spending Bars */}
-                <div className={styles.budgetChartCard}>
-                  <h4>Expense Breakdown</h4>
-                  <div className={styles.spendingBars}>
-                    {[{ name: 'Food', type: 'food' }, { name: 'Play & Toys', type: 'toy' }, { name: 'Cleaning', type: 'supplies' }, { name: 'Medical', type: 'vet' }].map((category, i) => {
-                      const categoryExpenses = expenses.filter(e => e.expense_type === category.type);
-                      const categoryTotal = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
-                      const percentage = totalSpent > 0 ? (categoryTotal / totalSpent) * 100 : 0;
-                      const colors = ['#22c55e', '#f59e0b', '#8b5cf6', '#ef4444'];
-                      return (
-                        <div key={category.type} className={styles.spendingBarRow}>
-                          <span className={styles.barLabel}>{category.name}</span>
-                          <div className={styles.barTrack}>
-                            <div 
-                              className={styles.barFill} 
-                              style={{ width: `${percentage}%`, background: colors[i] }}
-                            />
-                          </div>
-                          <span className={styles.barValue}>${categoryTotal} ({percentage.toFixed(0)}%)</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Savings Goal */}
-              <div className={styles.savingsCard}>
-                <h4>Savings Goal</h4>
-                {savingsGoal ? (
-                  <div className={styles.savingsProgress}>
-                    <div className={styles.savingsInfo}>
-                      <span>Progress: ${balance.toFixed(0)} / ${savingsGoal}</span>
-                      <span className={styles.savingsPercent}>{Math.min(100, ((balance / savingsGoal) * 100)).toFixed(0)}%</span>
-                    </div>
-                    <div className={styles.savingsBar}>
-                      <div 
-                        className={styles.savingsBarFill} 
-                        style={{ width: `${Math.min(100, (balance / savingsGoal) * 100)}%` }}
-                      />
-                    </div>
-                    {balance >= savingsGoal && <div className={styles.goalReached}><img src={trophyImg} alt="success" style={{ width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '8px' }} /> Goal Reached!</div>}
-                  </div>
-                ) : (
-                  <div className={styles.setSavingsGoal}>
-                    <input 
-                      type="number" 
-                      placeholder="Enter savings goal ($)"
-                      value={savingsGoalInput}
-                      onChange={(e) => setSavingsGoalInput(e.target.value)}
-                    />
-                    <button onClick={setSavingsGoalHandler}>Set Goal</button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <BudgetReport 
+              expenses={expenses}
+              balance={balance}
+              totalSpent={totalSpent}
+              savingsGoal={savingsGoal}
+              onSetSavingsGoal={handleSetSavingsGoal}
+            />
           )}
 
           {activeTab === 'achievements' && (
@@ -1242,8 +1134,7 @@ export default function PetCare() {
       {/* Loading Overlay - shows during quiz generation */}
       {isGenerating && (
         <div className={styles.loadingOverlay}>
-          <div className={styles.loadingSpinner}></div>
-          <div className={styles.loadingText}>Generating question...</div>
+          <FunLoader />
         </div>
       )}
 

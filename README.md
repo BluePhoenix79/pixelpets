@@ -1,73 +1,82 @@
-# React + TypeScript + Vite
+# PixelPets - Virtual Pet Manager
+### FBLA Introduction to Programming 2025-2026
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**PixelPets** is an interactive virtual pet simulation designed to teach users about pet care and financial responsibility. Users adopt a digital pet, manage its needs (Hunger, Happiness, etc.), and maintain a budget for supplies, food, and medical care.
 
-Currently, two official plugins are available:
+## 🎮 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 🐾 Virtual Pet Care
+- **Adoption:** Choose from different species (Dog, Cat, Bird, Fish, Mouse).
+- **Needs System:** Manage 6 core stats: Hunger, Happiness, Energy, Cleanliness, Health, and Love.
+- **Dynamic Reactions:** Pets change their mood and facial expressions based on how well they are treated (Happy, Sick, Sad, Energetic).
+- **Consequences:** Neglecting pets leads to sickness (Vet requirement) or the pet leaving.
 
-## React Compiler
+### 💰 Financial Responsibility ("Cost of Care")
+- **Budget Tracking:** Real-time tracking of Balance vs. Total Spent.
+- **Expense Categories:** Detailed breakdown of spending on Food, Toys, Supplies, and Vet bills.
+- **Reporting:** Visual charts (Pie Chart & Bar Graphs) to analyze spending habits.
+- **Savings Goals:** Set custom financial goals (e.g., "Save $500") and track progress.
+- **Earnings:** Complete quizzes and tasks to earn money for pet care.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🚀 Gamification
+- **Tasks & Quizzes:** Answer trivia or budget-related questions to earn rewards.
+- **Achievements:** Unlock badges for milestones (e.g., "Perfect Health", "Money Saver").
+- **Streaks:** Daily login and correct answer streaks with bonus multipliers.
 
-## Expanding the ESLint configuration
+## 🛠️ How to Use
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1.  **Create Account:** Sign up to save your progress securely in the cloud.
+2.  **Adopt a Pet:** Nmae your pet and choose its species.
+3.  **Dashboard:** View your pet's snapshot and navigate to the Care page.
+4.  **Care Page:**
+    -   Use the **Action Buttons** (Feed, Play, Clean) to keep stats high.
+    -   Watch your **Balance**! Each action costs money.
+    -   Click **Tasks** to answer questions and earn funds.
+    -   Check the **Budget** tab to review your spending and set savings goals.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📦 Tech Stack & Libraries Used
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+This project was built using modern web technologies:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+-   **Frontend:** [React](https://react.dev/) with [TypeScript](https://www.typescriptlang.org/)
+-   **Build Tool:** [Vite](https://vitejs.dev/)
+-   **Backend / Database:** [Supabase](https://supabase.com/) (PostgreSQL)
+-   **Routing:** [React Router](https://reactrouter.com/)
+-   **Charts & Reports:** [Chart.js](https://www.chartjs.org/) & `react-chartjs-2`
+-   **AI Integration:** Google Gemini API (for generating dynamic quiz questions)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📜 Credits
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+-   **Development:** Pranav Sai
+-   **Event:** FBLA Introduction to Programming
+-   **Topic:** "Build a Virtual Pet"
+-   **Icons:** Pixel Art Assets custom designed / generated.
+-   **Font:** 'Inter' from Google Fonts.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 📝 License
+
+This project is created for educational and competitive purposes.
+
+## Future Roadmap 🚀
+Here are exciting features planned for future updates to enhance fun and educational value:
+
+### 🎮 Advanced Mini-Games
+- **Memory Match**: A classic card-flipping game to train memory stats.
+- **Pet Racing**: Use your pet's Energy stat to race against AI pets.
+- **Rhythm Dance**: Tap to the beat to boost Happiness.
+
+### 🌐 Social Features
+- **Pet Park**: Visit a virtual park to see other players' pets (simulated).
+- **Leaderboards**: Compete for "Richest Player" or "Happiest Pet".
+
+### 📈 Economy 2.0
+- **Stock Market**: Buy and sell "Pet Stocks" (e.g., $KIBL, $BONE) to learn investing concepts.
+- **Jobs**: Send your pet to work for passive income.
+
+### 🎨 Deep Customization
+- **Accessories**: Buy hats, glasses, and outfits for your pet.
+- **Room Decor**: Customize the background and furniture of your pet's room.
+
+### 🎓 Educational Content
+- **New Quiz Topics**: Unlock Science, History, and Coding questions.
+- **Difficulty Scaling**: Earn higher rewards for answering "Hard" questions.

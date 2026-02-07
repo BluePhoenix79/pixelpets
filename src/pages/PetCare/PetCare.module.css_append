@@ -1,0 +1,31 @@
+
+/* Pulsing Tab Animation for New Toy */
+@keyframes tabPulse {
+    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); text-shadow: 0 0 10px rgba(59, 130, 246, 0); }
+    50% { box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.6); text-shadow: 0 0 15px rgba(59, 130, 246, 0.8); color: #60a5fa; }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); text-shadow: 0 0 10px rgba(59, 130, 246, 0); }
+}
+
+.pulseTab {
+    animation: tabPulse 1.5s infinite;
+    position: relative;
+    border-color: #3b82f6 !important;
+}
+
+.pulseTab::after {
+    content: '!';
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: #ef4444;
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}

@@ -43,7 +43,7 @@ export default function Dashboard() {
 
     const { data: financeData } = await supabase
       .from('user_finances')
-      .select('balance')
+      .select('balance, total_earned')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -59,6 +59,22 @@ export default function Dashboard() {
 
     if (petsData) {
       setPets(petsData);
+
+      // UX Improvement 1: Starter Money
+      // If user has 0 pets and less than $50, give them enough to start
+      if (petsData.length === 0 && (!financeData || financeData.balance < 50)) {
+        console.log('User has 0 pets and low balance. Resetting to $50.');
+        const { error: fundError } = await supabase.from('user_finances').upsert({ 
+          user_id: user.id, 
+          balance: 50,
+          total_earned: financeData?.total_earned || 0
+        });
+        
+        if (!fundError) {
+          setBalance(50);
+          // Optional: Show a toast/alert or just let them see the money
+        }
+      }
     }
   };
 
