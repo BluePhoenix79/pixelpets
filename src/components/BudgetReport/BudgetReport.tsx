@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
+import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement } from 'chart.js';
+import { Pie, Bar } from 'react-chartjs-2';
 import type { Expense } from '../../types';
 import styles from '../../pages/PetCare/PetCare.module.css';
 import moneyBagImg from '../../assets/money_bag.png';
 
 // Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement, BarElement);
 
 interface BudgetReportProps {
   expenses: Expense[];
@@ -23,26 +23,69 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
   savingsGoal, 
   onSetSavingsGoal 
 }) => {
-  const [expenseFilter, setExpenseFilter] = useState<'all' | 'food' | 'toy' | 'supplies' | 'vet'>('all');
+  const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
   const [savingsInput, setSavingsInput] = useState('');
 
-  const filteredExpenses = useMemo(() => {
-    return expenseFilter === 'all' 
-      ? expenses 
-      : expenses.filter(e => e.expense_type === expenseFilter);
-  }, [expenses, expenseFilter]);
+  const spendingChartData = useMemo(() => {
+    const categories = [...new Set(expenses.map(e => e.expense_type))];
+    const data = categories.map(type => 
+      expenses.filter(e => e.expense_type === type).reduce((sum, e) => sum + e.amount, 0)
+    );
 
-  const spendingChartData = useMemo(() => ({
-    labels: [...new Set(filteredExpenses.map(e => e.expense_type))],
-    datasets: [{
-      data: [...new Set(filteredExpenses.map(e => e.expense_type))].map(type => 
-        filteredExpenses.filter(e => e.expense_type === type).reduce((sum, e) => sum + e.amount, 0)
-      ),
-      backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
-      borderColor: 'rgba(255, 255, 255, 0.1)',
-      borderWidth: 1,
-    }]
-  }), [filteredExpenses]);
+    return {
+      labels: categories.map(c => c.charAt(0).toUpperCase() + c.slice(1)), 
+      datasets: [{
+        label: 'Spending by Category',
+        data: data,
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.7)',
+          'rgba(54, 162, 235, 0.7)',
+          'rgba(255, 206, 86, 0.7)',
+          'rgba(75, 192, 192, 0.7)',
+          'rgba(153, 102, 255, 0.7)',
+          'rgba(255, 159, 64, 0.7)',
+        ],
+        borderColor: [
+          'rgba(255, 99, 132, 1)',
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)',
+          'rgba(255, 159, 64, 1)',
+        ],
+        borderWidth: 1,
+      }]
+    };
+  }, [expenses]);
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'bottom' as const,
+        labels: { color: '#cbd5e1' }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        titleColor: '#f8fafc',
+        bodyColor: '#cbd5e1',
+        padding: 10,
+        cornerRadius: 8,
+        displayColors: true
+      }
+    },
+    scales: chartType === 'bar' ? {
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+        ticks: { color: '#94a3b8' }
+      },
+      x: {
+        grid: { display: false },
+        ticks: { color: '#94a3b8' }
+      }
+    } : undefined
+  };
 
   // Insight Calculations
   const insights = useMemo(() => {
@@ -73,14 +116,6 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
     }
   };
 
-  const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'food', label: 'Food' },
-    { id: 'toy', label: 'Toys' },
-    { id: 'supplies', label: 'Supplies' },
-    { id: 'vet', label: 'Vet' }
-  ];
-
   return (
     <div className={styles.tabContent}>
       <div className={styles.budgetSummary}>
@@ -101,7 +136,7 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
         </div>
       </div>
 
-      {/* Spending Insights Section - NEW */}
+      {/* Spending Insights Section */}
       {insights && (
         <div style={{ 
           display: 'grid', 
@@ -116,7 +151,7 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
           <div>
             <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '4px' }}>Top Spending Category</div>
             <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc', textTransform: 'capitalize' }}>
-              {insights.topCategory?.name} <span style={{ color: '#ef4444' }}>(${insights.topCategory?.amount})</span>
+              {insights.topCategory?.name} <span style={{ color: '#ef4444' }}>(${insights.topCategory?.amount.toFixed(2)})</span>
             </div>
           </div>
           <div>
@@ -140,48 +175,6 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
         </div>
       )}
 
-      {/* Top 5 Expenses */}
-      {expenses.length > 0 && (
-        <div style={{ marginBottom: '24px' }}>
-          <h4 style={{ color: '#f8fafc', marginBottom: '12px' }}>Top 5 Expenses</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {[...expenses].sort((a, b) => b.amount - a.amount).slice(0, 5).map((expense, i) => (
-              <div key={expense.id} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px 16px',
-                background: 'rgba(15, 23, 42, 0.4)',
-                borderRadius: '10px',
-                border: '1px solid rgba(255, 255, 255, 0.05)'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ 
-                    width: '24px', 
-                    height: '24px', 
-                    borderRadius: '50%', 
-                    background: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : '#475569',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                    color: i < 3 ? '#0f172a' : '#f8fafc'
-                  }}>
-                    {i + 1}
-                  </span>
-                  <div>
-                    <div style={{ fontWeight: 600, color: '#f8fafc' }}>{expense.item_name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', textTransform: 'capitalize' }}>{expense.expense_type}</div>
-                  </div>
-                </div>
-                <span style={{ fontWeight: 700, color: '#ef4444' }}>-${expense.amount}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
       <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginBottom: '20px' }}>
         <button 
            onClick={() => {
@@ -196,53 +189,66 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
              document.body.removeChild(link);
            }}
            style={{ 
-             background: '#22c55e', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600
+             background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.3)', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem', transition: 'all 0.2s'
            }}
         >
           Export CSV
-        </button>
-        <button 
-           onClick={() => window.print()}
-           style={{ 
-             background: '#475569', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600
-           }}
-        >
-          Print Report
         </button>
       </div>
 
       <div className={styles.budgetChartsGrid}>
         <div className={styles.budgetChartCard}>
-          <h4>Spending Analysis</h4>
-          
-          {/* New Toggle Buttons for Filter */}
-          <div style={{ marginBottom: '20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {categories.map(cat => (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h4 style={{ margin: 0 }}>Spending Analysis</h4>
+            <div style={{ display: 'flex', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '4px' }}>
               <button
-                key={cat.id}
-                onClick={() => setExpenseFilter(cat.id as any)}
+                onClick={() => setChartType('pie')}
                 style={{
-                  padding: '6px 16px',
-                  borderRadius: '20px',
+                  background: chartType === 'pie' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                  color: chartType === 'pie' ? '#60a5fa' : '#94a3b8',
                   border: 'none',
-                  background: expenseFilter === cat.id ? '#3b82f6' : 'rgba(255,255,255,0.1)',
-                  color: expenseFilter === cat.id ? 'white' : '#94a3b8',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
                   cursor: 'pointer',
-                  fontSize: '0.9rem',
                   fontWeight: 600,
-                  transition: 'all 0.2s ease'
+                  fontSize: '0.85rem',
+                  transition: 'all 0.2s'
                 }}
               >
-                {cat.label}
+                Pie
               </button>
-            ))}
+              <button
+                onClick={() => setChartType('bar')}
+                style={{
+                  background: chartType === 'bar' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+                  color: chartType === 'bar' ? '#60a5fa' : '#94a3b8',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Bar
+              </button>
+            </div>
           </div>
           
-          <div className={styles.chartWrapper} style={{ maxWidth: '250px', margin: '0 auto' }}>
-            {filteredExpenses.length > 0 ? (
-              <Pie data={spendingChartData} options={{ responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } } } }} />
+          <div className={styles.chartWrapper} style={{ width: '100%', height: '300px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            {expenses.length > 0 ? (
+              chartType === 'pie' ? (
+                <div style={{ width: '250px' }}>
+                  <Pie data={spendingChartData} options={chartOptions as any} /> 
+                </div>
+              ) : (
+                <div style={{ width: '100%', height: '100%' }}>
+                  <Bar data={spendingChartData} options={chartOptions as any} />
+                </div>
+              )
             ) : (
-              <p className={styles.noChartData}>No expenses to show for this filter.</p>
+              <p className={styles.noChartData}>No expenses recorded yet.</p>
             )}
           </div>
         </div>
@@ -253,7 +259,7 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
             <div className={styles.setSavingsGoal}>
               <input 
                 type="number" 
-                placeholder="Enter goal amount ($)" 
+                placeholder="Enter goal ($)" 
                 value={savingsInput}
                 onChange={(e) => setSavingsInput(e.target.value)}
               />
@@ -273,7 +279,7 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
               </div>
               {balance >= savingsGoal && (
                 <div className={styles.goalReached}>
-                  Goal Reached! Great saving habits!
+                  Goal Reached!
                 </div>
               )}
             </div>

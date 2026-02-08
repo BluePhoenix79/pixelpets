@@ -23,7 +23,7 @@ const PET_IMAGES: Record<PetSpecies, string> = {
 };
 
 export default function Dashboard() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isGuest } = useAuth();
   const navigate = useNavigate();
   const [pets, setPets] = useState<Pet[]>([]);
   const [balance, setBalance] = useState(0);
@@ -33,12 +33,22 @@ export default function Dashboard() {
   const [showNewPetForm, setShowNewPetForm] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user || isGuest) {
       loadUserData();
     }
-  }, [user]);
+  }, [user, isGuest]);
 
   const loadUserData = async () => {
+    if (isGuest) {
+        // Guest Mode: Load from Local Storage
+        const savedBalance = localStorage.getItem('pixelpets_guest_balance');
+        const savedPets = localStorage.getItem('pixelpets_guest_pets');
+        
+        if (savedBalance) setBalance(parseFloat(savedBalance));
+        if (savedPets) setPets(JSON.parse(savedPets));
+        return;
+    }
+
     if (!user) return;
 
     const { data: financeData } = await supabase
@@ -81,7 +91,7 @@ export default function Dashboard() {
   const handleCreatePet = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!petName || !petSpecies || !user) {
+    if (!petName || !petSpecies || (!user && !isGuest)) {
       alert('Please fill in all fields');
       return;
     }
@@ -94,6 +104,40 @@ export default function Dashboard() {
     }
 
     setIsCreating(true);
+
+    if (isGuest) {
+        // Guest Mode: Save to Local Storage
+        const newBalance = balance - PET_COST;
+        const newPet: Pet = {
+            id: `guest_pet_${Date.now()}`,
+            owner_id: 'guest_user',
+            name: petName,
+            species: petSpecies as PetSpecies,
+            created_at: new Date().toISOString(),
+            hunger: 50,
+            happiness: 50,
+            energy: 50,
+            cleanliness: 50,
+            health: 50,
+            love: 50,
+            level: 1,
+            xp: 0
+        } as Pet; // Cast to Pet to avoid missing optional fields matching DB type
+
+        const currentPets = JSON.parse(localStorage.getItem('pixelpets_guest_pets') || '[]');
+        const updatedPets = [newPet, ...currentPets];
+
+        localStorage.setItem('pixelpets_guest_balance', newBalance.toString());
+        localStorage.setItem('pixelpets_guest_pets', JSON.stringify(updatedPets));
+
+        setBalance(newBalance);
+        setPets(updatedPets);
+        setPetName('');
+        setPetSpecies('');
+        setShowNewPetForm(false);
+        setIsCreating(false);
+        return;
+    }
 
     // Deduct the pet adoption cost
     const { error: financeError } = await supabase.from('user_finances').update({

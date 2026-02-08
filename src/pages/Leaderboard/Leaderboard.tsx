@@ -33,7 +33,7 @@ export default function Leaderboard() {
                 .from('user_finances')
                 .select('user_id, balance')
                 .order('balance', { ascending: false })
-                .limit(20);
+                .limit(50);
             
             if (finError) console.error('Finance error:', finError);
             
@@ -65,9 +65,10 @@ export default function Leaderboard() {
         } else if (activeTab === 'level') {
             const { data: pets, error: petError } = await supabase
                 .from('pets')
-                .select('id, name, level, owner_id, show_on_leaderboard')
+                .select('id, name, level, xp, owner_id, show_on_leaderboard')
                 .order('level', { ascending: false })
-                .limit(20);
+                .order('xp', { ascending: false }) // Secondary sort by XP
+                .limit(50);
             
             if (petError) console.error('Pet error:', petError);
 
@@ -86,7 +87,7 @@ export default function Leaderboard() {
                         id: p.id,
                         username: p.name,
                         value: p.level || 1,
-                        subtext: `Trainer: ${profileMap.get(p.owner_id)?.username || 'Unknown'}`
+                        subtext: `${profileMap.get(p.owner_id)?.username || 'Unknown'} • ${p.xp || 0} XP`
                     }));
             }
         } else if (activeTab === 'streak') {
@@ -94,7 +95,7 @@ export default function Leaderboard() {
                 .from('user_streaks')
                 .select('user_id, current_streak')
                 .order('current_streak', { ascending: false })
-                .limit(20);
+                .limit(50);
             
             if (streakError) console.error('Streak error:', streakError);
 
@@ -125,6 +126,8 @@ export default function Leaderboard() {
         }
     } catch (err) {
         console.error("Error fetching leaderboard:", err);
+        // If error, likely offline or connection issue
+        setData([]);
     }
     
     setData(entries);
@@ -134,13 +137,13 @@ export default function Leaderboard() {
   const formatValue = (val: number) => {
       if (activeTab === 'balance') return `$${val.toFixed(2)}`;
       if (activeTab === 'level') return `Lvl ${val}`;
-      return `${val} Days`;
+      return `${val} Day(s)`;
   };
 
   return (
     <div className={styles.leaderboardPage}>
-      <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
-        Back to Home
+      <button className={styles.backBtn} onClick={() => navigate(-1)}>
+        Back
       </button>
 
       <div className={styles.header}>
@@ -188,6 +191,11 @@ export default function Leaderboard() {
                       </div>
                   ))
               )}
+               {data.length === 0 && !loading && (
+                   <div style={{ marginTop: '20px', color: '#64748b', fontSize: '0.9rem' }}>
+                       Unable to load rankings. Check your internet connection.
+                   </div>
+               )}
           </div>
       )}
     </div>

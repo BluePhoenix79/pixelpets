@@ -20,7 +20,7 @@ export default function Auth() {
   const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
   
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, loginAsGuest } = useAuth(); // Destructure loginAsGuest
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
@@ -42,6 +42,10 @@ export default function Auth() {
     }
     setIsLoading(false);
   };
+ 
+// ... (skip down to render)
+
+
 
   const handleSignup = async (e: FormEvent) => {
     e.preventDefault();
@@ -198,7 +202,20 @@ export default function Auth() {
 
           {message.text && (
             <div className={`${styles.message} ${styles[message.type]}`}>
-              {message.text}
+              {message.type === 'error' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                  </svg>
+              )}
+              {message.type === 'success' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+              )}
+              <span>{message.text}</span>
             </div>
           )}
 
@@ -215,6 +232,21 @@ export default function Auth() {
               className={styles.googleIcon} 
             />
             Sign in with Google
+          </button>
+
+          <button 
+            onClick={() => {
+                if (!localStorage.getItem('pixelpets_guest_pets')) {
+                    localStorage.setItem('pixelpets_guest_balance', '50');
+                    localStorage.setItem('pixelpets_guest_pets', '[]');
+                }
+                loginAsGuest();
+                navigate('/dashboard');
+            }}
+            className={styles.quickPlayBtn}
+            type="button"
+          >
+             <span>🎮</span> Play Offline
           </button>
         </div>
 

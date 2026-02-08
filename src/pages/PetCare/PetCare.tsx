@@ -24,6 +24,7 @@ import { getRandomGame, type MiniGame } from '../../data/miniGames';
 import GameModal from '../../components/GameModal/GameModal';
 import type { Pet, PetSpecies, Expense, Task, ActionType } from '../../types';
 import { generateAIQuestion } from '../../lib/ai';
+import { getXPForNextLevel } from '../../lib/xp';
 import { PetStats } from '../../components/PetStats/PetStats';
 import { ActionButtons } from '../../components/ActionButtons/ActionButtons';
 import { BudgetReport } from '../../components/BudgetReport/BudgetReport';
@@ -86,7 +87,7 @@ interface CurrentTaskInfo {
 
 export default function PetCare() {
   const { id: petId } = useParams<{ id: string }>();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isGuest } = useAuth();
   const navigate = useNavigate();
 
   // State
@@ -134,7 +135,6 @@ export default function PetCare() {
   const GLOBAL_ACHIEVEMENTS = new Set(['streak_3', 'streak_10', 'tasks_5', 'tasks_25', 'daily_7', 'saver']);
 
 
-
   // Add Popup Helper - now checks session tracking to prevent duplicates
   const addPopup = (name: string, icon: ReactNode, achievementId?: string) => {
     // If achievementId provided, check if already shown this session
@@ -154,13 +154,13 @@ export default function PetCare() {
 
   // Load data on mount
   useEffect(() => {
-    if (user && petId) {
+    if ((user || isGuest) && petId) {
       loadAllData();
     }
     return () => {
       if (decayIntervalRef.current) clearInterval(decayIntervalRef.current);
     };
-  }, [user, petId]);
+  }, [user, petId, isGuest]);
 
   // Start stat decay - faster decay every 10 seconds
   useEffect(() => {
@@ -204,8 +204,10 @@ export default function PetCare() {
   }, [pet?.id]);
 
   const loadAllData = async () => {
-    if (!user || !petId) return;
-    await ensureFinance(user.id);
+    if ((!user && !isGuest) || !petId) return;
+    if (user) {
+        await ensureFinance(user.id);
+    }
     await Promise.all([loadPet(), loadBalance(), loadExpenses(), loadTotalSpent(), loadSavingsGoal(), loadAchievements()]);
     checkTutorial();
     loadDailyStreak();
@@ -213,6 +215,19 @@ export default function PetCare() {
   };
 
   const loadPet = async () => {
+    if (isGuest) {
+        const savedPetsString = localStorage.getItem('pixelpets_guest_pets');
+        if (savedPetsString) {
+            const savedPets: Pet[] = JSON.parse(savedPetsString);
+            const foundPet = savedPets.find(p => p.id === petId);
+            if (foundPet) {
+                setPet(foundPet);
+                return;
+            }
+        }
+        alert('Pet not found'); navigate('/dashboard'); return;
+    }
+
     const { data, error } = await supabase.from('pets').select('*').eq('id', petId).eq('owner_id', user!.id).maybeSingle();
     if (!data || error) { alert('Pet not found'); navigate('/dashboard'); return; }
     setPet(data);
@@ -240,6 +255,10 @@ export default function PetCare() {
   };
 
   const loadDailyStreak = async () => {
+    if (isGuest) {
+        // Guest Streak Logic - Simple Local Check
+        return; // TODO: Implement guest streak if needed, skipping for now
+    }
     if (!user) return;
     
     // Get date strings using local time
@@ -350,7 +369,7 @@ export default function PetCare() {
 
   // Achievement Check Effect
   useEffect(() => {
-    if (!pet || !user || !achievementsLoaded) return;
+    if (!pet || (!user && !isGuest) || !achievementsLoaded) return;
     
     // Require at least 1 completed task before stat-based achievements can unlock
     // This prevents achievements from triggering on a brand new pet with default 100 stats
@@ -371,6 +390,12 @@ export default function PetCare() {
       { id: 'tasks_25', name: 'Task Master', icon: <img src={trophyImg} className={styles.pixelIcon} alt="trophy" />, check: totalTasksCompleted >= 25 },
       { id: 'daily_7', name: 'Weekly Warrior', icon: <img src={calendarImg} className={styles.pixelIcon} alt="calendar" />, check: dailyStreak >= 7 },
       { id: 'saver', name: 'Money Saver', icon: <img src={moneyBagImg} className={styles.pixelIcon} alt="money" />, check: balance >= 500 },
+      // New Achievements
+      { id: 'level_5', name: 'Rising Star', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: (pet.level || 1) >= 5 },
+      { id: 'level_10', name: 'Pixel Master', icon: <img src={trophyImg} className={styles.pixelIcon} alt="trophy" />, check: (pet.level || 1) >= 10 },
+      { id: 'quiz_whiz', name: 'Quiz Whiz', icon: <img src={strongArmImg} className={styles.pixelIcon} alt="brain" />, check: totalTasksCompleted >= 50 },
+      { id: 'big_spender', name: 'Big Spender', icon: <img src={moneyBagImg} className={styles.pixelIcon} alt="spending" />, check: totalSpent >= 500 },
+      { id: 'shopaholic', name: 'Shopaholic', icon: <img src={foodImg} className={styles.pixelIcon} alt="shopping" />, check: expenses.length >= 10 },
     ];
 
     achievementDefinitions.forEach(async (achievement) => {
@@ -386,44 +411,78 @@ export default function PetCare() {
 
       if (achievement.check && !isAlreadyUnlocked) {
         // Unlock achievement
-        await supabase.from('achievements').insert({
-          user_id: user.id,
-          pet_id: petId, // Always tag with current pet, even only for history
-          achievement_id: achievement.id,
-          completed_at: new Date().toISOString()
-        });
+        if (!isGuest && user) {
+            await supabase.from('achievements').insert({
+            user_id: user.id,
+            pet_id: petId, // Always tag with current pet, even only for history
+            achievement_id: achievement.id,
+            completed_at: new Date().toISOString()
+            });
+        }
         
         // Update local state locally to prevent immediate duplicate
         setUnlockedAchievements(prev => [...prev, { id: achievement.id, petId: petId as string }]);
         addPopup(achievement.name, achievement.icon, achievement.id);
       }
     });
-  }, [pet, answerStreak, totalTasksCompleted, dailyStreak, balance, unlockedAchievements, user, petId, achievementsLoaded]);
+  }, [pet, answerStreak, totalTasksCompleted, dailyStreak, balance, unlockedAchievements, user, petId, achievementsLoaded, isGuest]);
 
 
   const loadTotalTasksCompleted = async () => {
+    if (isGuest) {
+        return; // No task history for guest yet
+    }
     if (!user) return;
     const { count } = await supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('completed', true);
     setTotalTasksCompleted(count || 0);
   };
 
   const loadBalance = async () => {
+    if (isGuest) {
+        const b = localStorage.getItem('pixelpets_guest_balance');
+        if (b) setBalance(parseFloat(b));
+        return;
+    }
     const { data } = await supabase.from('user_finances').select('balance').eq('user_id', user!.id).maybeSingle();
     if (data) setBalance(data.balance);
   };
 
   const loadExpenses = async () => {
+    if (isGuest) {
+        const e = localStorage.getItem('pixelpets_guest_expenses');
+        if (e) setExpenses(JSON.parse(e));
+        return;
+    }
     const { data } = await supabase.from('expenses').select('*').eq('user_id', user!.id).eq('pet_id', petId).order('created_at', { ascending: false });
     if (data) setExpenses(data);
   };
 
   const loadTasks = async () => {
+    if (isGuest) {
+        // Mock tasks for guest
+        const taskTemplates = [
+            { id: 't1', task_name: 'Clean your room', reward_amount: 15, completed: false },
+            { id: 't2', task_name: 'Read for 20 minutes', reward_amount: 12, completed: false },
+            { id: 't3', task_name: 'Water the plants', reward_amount: 8, completed: false }
+        ];
+        // TODO: Persist tasks? For now just static random
+        setTasks(taskTemplates as any);
+        return;
+    }
     const { data } = await supabase.from('tasks').select('*').eq('user_id', user!.id).eq('completed', false).order('created_at', { ascending: false });
     if (data) setTasks(data);
   };
 
   const loadTotalSpent = async () => {
     if (!petId) return;
+    if (isGuest) {
+        const e = localStorage.getItem('pixelpets_guest_expenses');
+        if (e) {
+            const parsed = JSON.parse(e);
+            setTotalSpent(parsed.reduce((sum: number, item: any) => sum + item.amount, 0));
+        }
+        return;
+    }
     const { data } = await supabase.from('expenses').select('amount').eq('pet_id', petId);
     if (data) {
       const total = data.reduce((sum, item) => sum + item.amount, 0);
@@ -432,11 +491,13 @@ export default function PetCare() {
   };
 
   const loadSavingsGoal = async () => {
+    if (isGuest) return; // No savings goal for guest
     const { data } = await supabase.from('savings_goals').select('*').eq('user_id', user!.id).eq('pet_id', petId).order('created_at', { ascending: false }).limit(1).maybeSingle();
     if (data) setSavingsGoal(data.target_amount);
   };
 
   const loadAchievements = async () => {
+    if (isGuest) return; // No persistence for guest achievements yet
     // Load ALL achievements for this user to support global achievements (Tasks, Streak, Balance)
     const { data } = await supabase.from('achievements').select('achievement_id, pet_id').eq('user_id', user!.id);
     if (data) {
@@ -458,6 +519,18 @@ export default function PetCare() {
   };
 
   const updatePetInDatabase = async (petData: Pet) => {
+    if (isGuest) {
+        const savedPetsString = localStorage.getItem('pixelpets_guest_pets');
+        if (savedPetsString) {
+            const savedPets: Pet[] = JSON.parse(savedPetsString);
+            const index = savedPets.findIndex(p => p.id === petId);
+            if (index !== -1) {
+                savedPets[index] = { ...petData, last_updated: new Date().toISOString() };
+                localStorage.setItem('pixelpets_guest_pets', JSON.stringify(savedPets));
+            }
+        }
+        return;
+    }
     await supabase.from('pets').update({
       hunger: petData.hunger,
       happiness: petData.happiness,
@@ -465,12 +538,14 @@ export default function PetCare() {
       cleanliness: petData.cleanliness,
       health: petData.health,
       love: petData.love,
+      xp: petData.xp,
+      level: petData.level,
       last_updated: new Date().toISOString()
     }).eq('id', petId);
   };
 
   const performAction = async (action: ActionType) => {
-    if (!pet || !user) return;
+    if (!pet || (!user && !isGuest)) return;
     const cost = COSTS[action];
     if (cost > balance) { alert('Not enough money! Complete tasks to earn more.'); return; }
 
@@ -514,38 +589,75 @@ export default function PetCare() {
       //   break;
     }
 
-    // Award small XP for care actions
-    const xpGain = 10;
-    const currentLevel = updated.level || 1;
-    const xpToLevel = currentLevel * 500;
-    let newXp = (updated.xp || 0) + xpGain;
-    
-    if (newXp >= xpToLevel) {
-        updated.level = currentLevel + 1;
-        updated.xp = newXp - xpToLevel;
-        addPopup(`Level Up! ${updated.level}`, <img src={starImg} className={styles.pixelIcon} alt="level-up" />);
-        // Bonus stats
-        updated.happiness = 100;
-        updated.energy = 100;
-    } else {
+    // XP Logic - Earn XP by spending money
+    if (cost > 0) {
+        const xpGain = cost; // 1 XP per 1 Coin spent
+        const currentLevel = updated.level || 1;
+        const xpToLevel = getXPForNextLevel(currentLevel); // 100
+        let newXp = (updated.xp || 0) + xpGain;
+        let newLevel = currentLevel;
+        
+        // Level Up Logic
+        while (newXp >= xpToLevel) {
+            newLevel++;
+            newXp -= xpToLevel;
+            // Bonus stats on level up
+            updated.happiness = 100;
+            updated.energy = 100;
+            addPopup(`Level Up! ${newLevel}`, <img src={starImg} className={styles.pixelIcon} alt="level-up" />);
+        }
+        
         updated.xp = newXp;
+        updated.level = newLevel;
     }
 
     setPet(updated);
     await updatePetInDatabase(updated);
 
     if (cost > 0 && expenseItem.item) {
-      await decreaseBalance(user.id, cost);
-      await supabase.from('expenses').insert({ pet_id: petId, user_id: user.id, expense_type: expenseItem.type, item_name: expenseItem.item, amount: cost });
-      await loadBalance();
-      await loadExpenses();
-      await loadTotalSpent();
+      if (isGuest) {
+          const newBalance = balance - cost;
+          setBalance(newBalance);
+          localStorage.setItem('pixelpets_guest_balance', newBalance.toString());
+          
+          const newExpense = { 
+              id: Date.now().toString(), 
+              created_at: new Date().toISOString(), 
+              pet_id: petId, 
+              user_id: 'guest', 
+              expense_type: expenseItem.type, 
+              item_name: expenseItem.item, 
+              amount: cost 
+          };
+          const currentExpenses = JSON.parse(localStorage.getItem('pixelpets_guest_expenses') || '[]');
+          localStorage.setItem('pixelpets_guest_expenses', JSON.stringify([newExpense, ...currentExpenses]));
+          setExpenses([newExpense as Expense, ...expenses]);
+          setTotalSpent(totalSpent + cost);
+      } else {
+        await decreaseBalance(user!.id, cost);
+        await supabase.from('expenses').insert({ pet_id: petId, user_id: user!.id, expense_type: expenseItem.type, item_name: expenseItem.item, amount: cost });
+        await loadBalance();
+        await loadExpenses();
+        await loadTotalSpent();
+      }
     }
   };
 
   const generateTasks = async () => {
-    if (!user) return;
+    if (!user && !isGuest) return;
     setIncorrectTaskIds(new Set());
+    
+    // For guest, simply regenerate random tasks
+    if (isGuest) {
+        const taskTemplates = [
+            { id: `t${Date.now()}_1`, task_name: 'Clean your room', reward_amount: 15, completed: false },
+            { id: `t${Date.now()}_2`, task_name: 'Do homework for 30 minutes', reward_amount: 12, completed: false },
+            { id: `t${Date.now()}_3`, task_name: 'Help with dishes', reward_amount: 10, completed: false },
+        ];
+        setTasks(taskTemplates as any);
+        return;
+    }
+
     const taskTemplates = [
       { name: 'Clean your room', reward: 15 },
       { name: 'Do homework for 30 minutes', reward: 12 },
@@ -560,8 +672,8 @@ export default function PetCare() {
     ];
     const selectedTasks = [...taskTemplates].sort(() => Math.random() - 0.5).slice(0, 3);
 
-    await supabase.from('tasks').delete().eq('user_id', user.id).eq('completed', false);
-    await supabase.from('tasks').insert(selectedTasks.map(t => ({ user_id: user.id, task_name: t.name, reward_amount: t.reward, completed: false })));
+    await supabase.from('tasks').delete().eq('user_id', user!.id).eq('completed', false);
+    await supabase.from('tasks').insert(selectedTasks.map(t => ({ user_id: user!.id, task_name: t.name, reward_amount: t.reward, completed: false })));
     await loadTasks();
   };
 
@@ -603,7 +715,7 @@ export default function PetCare() {
   };
 
   const handleGameComplete = async (success: boolean) => {
-    if (!currentTaskInfo || !user) return;
+    if (!currentTaskInfo || (!user && !isGuest)) return;
 
     if (success) {
       // Increase streak and calculate bonus
@@ -623,7 +735,7 @@ export default function PetCare() {
         // XP & Level Up Logic
         const xpGain = 100; // Fixed 100 XP per task
         const currentLevel = updatedPet.level || 1;
-        const xpToLevel = currentLevel * 500;
+        const xpToLevel = getXPForNextLevel(currentLevel);
         let newXp = (updatedPet.xp || 0) + xpGain;
         let newLevel = currentLevel;
         
@@ -643,15 +755,21 @@ export default function PetCare() {
         await updatePetInDatabase(updatedPet);
       }
       
-      const { data: currentFinance } = await supabase.from('user_finances').select('*').eq('user_id', user.id).single();
-      if (currentFinance) {
-        await supabase.from('user_finances').update({ 
-          balance: currentFinance.balance + totalReward, 
-          total_earned: currentFinance.total_earned + totalReward 
-        }).eq('user_id', user.id);
-        await loadBalance();
+      if (isGuest) {
+          const newBalance = balance + totalReward;
+          localStorage.setItem('pixelpets_guest_balance', newBalance.toString());
+          setBalance(newBalance);
+      } else if (user) {
+        const { data: currentFinance } = await supabase.from('user_finances').select('*').eq('user_id', user.id).single();
+        if (currentFinance) {
+            await supabase.from('user_finances').update({ 
+            balance: currentFinance.balance + totalReward, 
+            total_earned: currentFinance.total_earned + totalReward 
+            }).eq('user_id', user.id);
+            await loadBalance();
+        }
+        await supabase.from('tasks').update({ completed: true, completed_at: new Date().toISOString() }).eq('id', currentTaskInfo.id);
       }
-      await supabase.from('tasks').update({ completed: true, completed_at: new Date().toISOString() }).eq('id', currentTaskInfo.id);
     } else {
       // Reset streak on incorrect answer
       setAnswerStreak(0);
@@ -800,19 +918,20 @@ export default function PetCare() {
           <h2>{pet.name}</h2>
           <p className={styles.petStatus}>{getPetStatus()}</p>
           
-          {/* XP Bar - More Prominent */}
+          {/* XP Bar - Re-added */}
           <div className={styles.xpContainer}>
-             <div className={styles.xpLabel}>Experience</div>
-             <div className={styles.xpBar}>
+             <div className={styles.xpInfoRow}>
+                {/* Minimal Labels: Level on left, XP on right */}
+                <span className={styles.xpLevelText}>Lvl {pet.level || 1}</span>
+                <span className={styles.xpLevelText} style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>{(pet.xp || 0)} / 100 XP</span>
+             </div>
+             <div className={styles.xpTrack}>
                 <div 
                     className={styles.xpFill} 
-                    style={{ width: `${Math.min(100, ((pet.xp || 0) % 500) / 5)}%` }} 
+                    style={{ width: `${(pet.xp || 0)}%` }} 
                 />
              </div>
-             <span className={styles.xpText}>{(pet.xp || 0) % 500} / 500 XP</span>
           </div>
-          
-          {/* Fun Feature: Inventory Shelf */}
           
           {/* Fun Feature: Inventory Shelf */}
 
@@ -953,7 +1072,13 @@ export default function PetCare() {
                   { id: 'tasks_5', name: 'Task Beginner', description: 'Complete 5 tasks', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: totalTasksCompleted >= 5 },
                   { id: 'tasks_25', name: 'Task Master', description: 'Complete 25 tasks', icon: <img src={trophyImg} className={styles.pixelIcon} alt="trophy" />, check: totalTasksCompleted >= 25 },
                   { id: 'daily_7', name: 'Weekly Warrior', description: 'Login 7 days in a row', icon: <img src={calendarImg} className={styles.pixelIcon} alt="calendar" />, check: dailyStreak >= 7 },
+                  { id: 'daily_7', name: 'Weekly Warrior', description: 'Login 7 days in a row', icon: <img src={calendarImg} className={styles.pixelIcon} alt="calendar" />, check: dailyStreak >= 7 },
                   { id: 'saver', name: 'Money Saver', description: 'Have $500+ balance', icon: <img src={moneyBagImg} className={styles.pixelIcon} alt="money" />, check: balance >= 500 },
+                  { id: 'level_5', name: 'Rising Star', description: 'Reach Level 5', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: (pet.level || 1) >= 5 },
+                  { id: 'level_10', name: 'Pixel Master', description: 'Reach Level 10', icon: <img src={trophyImg} className={styles.pixelIcon} alt="trophy" />, check: (pet.level || 1) >= 10 },
+                  { id: 'quiz_whiz', name: 'Quiz Whiz', description: 'Answer 50 questions correctly', icon: <img src={strongArmImg} className={styles.pixelIcon} alt="brain" />, check: totalTasksCompleted >= 50 },
+                  { id: 'big_spender', name: 'Big Spender', description: 'Spend over $500 on your pet', icon: <img src={moneyBagImg} className={styles.pixelIcon} alt="spending" />, check: totalSpent >= 500 },
+                  { id: 'shopaholic', name: 'Shopaholic', description: 'Buy 10 different items', icon: <img src={foodImg} className={styles.pixelIcon} alt="shopping" />, check: expenses.length >= 10 },
                 ].map(achievement => {
                     const unlocked = isAchievementUnlocked(achievement.id);
                     return (
@@ -1078,6 +1203,11 @@ export default function PetCare() {
                 <div className={styles.tutorialIcon}><img src={trophyImg} alt="trophy" style={{ width: '48px', height: '48px' }} /></div>
                 <h3>Achieve Goals</h3>
                 <p>Unlock achievements and maintain your streaks!</p>
+              </div>
+              <div className={styles.tutorialSection}>
+                <div className={styles.tutorialIcon}><img src={starImg} alt="ai" style={{ width: '48px', height: '48px' }} /></div>
+                <h3>Level Up</h3>
+                <p>Buy items for your pet to earn XP! 100 XP = 1 Level Up!</p>
               </div>
               <div className={styles.tutorialSection}>
                 <div className={styles.tutorialIcon}><img src={starImg} alt="ai" style={{ width: '48px', height: '48px' }} /></div>
