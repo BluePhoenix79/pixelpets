@@ -21,13 +21,27 @@ export default function Settings() {
   const [questionTopic, setQuestionTopicState] = useState(getQuestionTopic());
   const [customTopic, setCustomTopicState] = useState(getCustomTopic());
   const [difficulty, setDifficultyState] = useState<Difficulty>(getDifficulty());
+  const [showOnLeaderboard, setShowOnLeaderboard] = useState(true);
 
   useEffect(() => {
     if (user) {
       setUsername(user.user_metadata?.username || '');
       loadPets();
+      loadLeaderboardPreference();
     }
   }, [user]);
+
+  const loadLeaderboardPreference = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('show_on_leaderboard')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (data) {
+      setShowOnLeaderboard(data.show_on_leaderboard !== false);
+    }
+  };
 
   const loadPets = async () => {
     if (!user) return;
@@ -37,6 +51,21 @@ export default function Settings() {
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false });
     if (data) setPets(data);
+  };
+
+  const handleUserLeaderboardToggle = async (value: boolean) => {
+    if (!user) return;
+    setShowOnLeaderboard(value);
+    await supabase.from('profiles').upsert({
+      user_id: user.id,
+      username: user.user_metadata?.username || user.email?.split('@')[0] || 'Trainer',
+      show_on_leaderboard: value
+    }, { onConflict: 'user_id' });
+  };
+
+  const handlePetLeaderboardToggle = async (petId: string, value: boolean) => {
+    await supabase.from('pets').update({ show_on_leaderboard: value }).eq('id', petId);
+    loadPets();
   };
 
   const showMessage = (text: string, type: 'success' | 'error') => {
@@ -175,6 +204,13 @@ export default function Settings() {
                     </div>
                     <div className={styles.petActions}>
                       <button 
+                        className={`${styles.toggleBtn} ${pet.show_on_leaderboard !== false ? styles.toggleOn : styles.toggleOff}`}
+                        onClick={() => handlePetLeaderboardToggle(pet.id, pet.show_on_leaderboard === false)}
+                        title="Show on Leaderboard"
+                      >
+                        {pet.show_on_leaderboard !== false ? 'Visible' : 'Hidden'}
+                      </button>
+                      <button 
                         className={styles.renameBtn}
                         onClick={() => handleRenamePet(pet.id, pet.name)}
                       >
@@ -295,6 +331,22 @@ export default function Settings() {
                 <option value="medium">Medium (Standard)</option>
                 <option value="hard">Hard (Advanced)</option>
               </select>
+            </div>
+          </div>
+
+          <div className={styles.settingCard}>
+            <h2>Leaderboard Privacy</h2>
+            <p className={styles.settingDescription}>Control your visibility on the global leaderboard. Use the toggle next to each pet above to control pet visibility.</p>
+            
+            <div className={styles.toggleRow}>
+              <label htmlFor="user-leaderboard">Show me on leaderboard</label>
+              <input 
+                type="checkbox" 
+                id="user-leaderboard"
+                checked={showOnLeaderboard}
+                onChange={(e) => handleUserLeaderboardToggle(e.target.checked)}
+                className={styles.toggleCheckbox}
+              />
             </div>
           </div>
         </div>

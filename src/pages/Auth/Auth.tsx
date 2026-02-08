@@ -16,14 +16,17 @@ interface MessageState {
 
 export default function Auth() {
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [message, setMessage] = useState<MessageState>({ text: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
   
   const { signIn, signUp } = useAuth();
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+
+  const navigate = useNavigate();
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -44,13 +47,18 @@ export default function Auth() {
     e.preventDefault();
     setMessage({ text: '', type: '' });
 
+    if (!username.trim()) {
+      setMessage({ text: 'Username is required', type: 'error' });
+      return;
+    }
+
     if (signupPassword.length < 6) {
       setMessage({ text: 'Password must be at least 6 characters', type: 'error' });
       return;
     }
 
     setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword);
+    const { error } = await signUp(signupEmail, signupPassword, username);
 
     if (error) {
       setMessage({ text: error.message, type: 'error' });
@@ -146,6 +154,18 @@ export default function Auth() {
 
           {activeTab === 'signup' && (
             <form className={styles.authForm} onSubmit={handleSignup}>
+              <div className={styles.formGroup}>
+                <label htmlFor="signup-username">USERNAME</label>
+                <input 
+                  id="signup-username" 
+                  type="text" 
+                  required 
+                  placeholder="PixelMaster99"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+
               <div className={styles.formGroup}>
                 <label htmlFor="signup-email">EMAIL</label>
                 <input 

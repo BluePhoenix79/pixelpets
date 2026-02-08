@@ -28,9 +28,12 @@ import { PetStats } from '../../components/PetStats/PetStats';
 import { ActionButtons } from '../../components/ActionButtons/ActionButtons';
 import { BudgetReport } from '../../components/BudgetReport/BudgetReport';
 import { FunLoader } from '../../components/FunLoader/FunLoader';
-import { openMysteryBox, formatDbName, parseToyItem, RARITY_COLORS } from '../../lib/toySystem';
 import styles from './PetCare.module.css';
 import dogImg from '../../assets/dog.png';
+import catImg from '../../assets/cat.png';
+import birdImg from '../../assets/bird.png';
+import fishImg from '../../assets/fish.png';
+import mouseImg from '../../assets/mouse.png';
 import happinessImg from '../../assets/happiness.png';
 import healthImg from '../../assets/heart.png';
 import energyImg from '../../assets/lightning.png';
@@ -59,11 +62,6 @@ import bathImg from '../../assets/bath.png';
 
 // Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement);
-
-import catImg from '../../assets/cat.png';
-import birdImg from '../../assets/bird.png';
-import fishImg from '../../assets/fish.png';
-import mouseImg from '../../assets/mouse.png';
 
 const PET_EMOJIS: Record<PetSpecies, string> = {
   dog: dogImg,
@@ -324,7 +322,7 @@ export default function PetCare() {
         }).eq('user_id', user.id);
         
         // Trigger Streak Popup
-        addPopup(`${currentStreak} Day Streak! 🔥`, <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+        addPopup(`${currentStreak} Day Streak!`, <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
         console.log('Continued streak from yesterday:', currentStreak);
       } else {
         // Missed at least one day OR first login ever on a new day
@@ -341,7 +339,7 @@ export default function PetCare() {
         }).eq('user_id', user.id);
         
         console.log('New streak started! Previous login was:', lastLogin);
-        addPopup('Day 1 Streak Started! 🔥', <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+        addPopup('Day 1 Streak Started!', <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
       }
     }
     
@@ -511,16 +509,26 @@ export default function PetCare() {
         updated.happiness = Math.max(0, pet.happiness - 10);
         expenseItem = { item: 'Veterinary Care', type: 'vet' };
         break;
-      case 'toy':
-        // Mystery Box Logic
-        const toy = openMysteryBox();
-        updated.happiness = Math.min(100, pet.happiness + 15); // Less happiness direct, more from item
-        expenseItem = { item: formatDbName(toy), type: 'toy' }; 
-        addPopup(`Unboxed: ${toy.name}!`, <span>{toy.icon}</span>);
-        // Highlight Toy Box tab instead of switching immediately
-        setHasNewToy(true);
-        // setActiveTab('toybox'); // Removed auto-switch to let user discover
-        break;
+      // Removed Toy case as requested by user
+      // case 'toy':
+      //   break;
+    }
+
+    // Award small XP for care actions
+    const xpGain = 10;
+    const currentLevel = updated.level || 1;
+    const xpToLevel = currentLevel * 500;
+    let newXp = (updated.xp || 0) + xpGain;
+    
+    if (newXp >= xpToLevel) {
+        updated.level = currentLevel + 1;
+        updated.xp = newXp - xpToLevel;
+        addPopup(`Level Up! ${updated.level}`, <img src={starImg} className={styles.pixelIcon} alt="level-up" />);
+        // Bonus stats
+        updated.happiness = 100;
+        updated.energy = 100;
+    } else {
+        updated.xp = newXp;
     }
 
     setPet(updated);
@@ -610,7 +618,27 @@ export default function PetCare() {
       
       // Increase pet love when completing tasks
       if (pet) {
-        const updatedPet = { ...pet, love: Math.min(100, (pet.love || 50) + 5) };
+        let updatedPet = { ...pet, love: Math.min(100, (pet.love || 50) + 5) };
+        
+        // XP & Level Up Logic
+        const xpGain = 100; // Fixed 100 XP per task
+        const currentLevel = updatedPet.level || 1;
+        const xpToLevel = currentLevel * 500;
+        let newXp = (updatedPet.xp || 0) + xpGain;
+        let newLevel = currentLevel;
+        
+        if (newXp >= xpToLevel) {
+            newLevel += 1;
+            newXp = newXp - xpToLevel;
+            addPopup(`Level Up! ${newLevel}`, <img src={starImg} className={styles.pixelIcon} alt="level-up" />);
+            // Bonus stats on level up
+            updatedPet.happiness = 100;
+            updatedPet.energy = 100;
+        }
+        
+        updatedPet.xp = newXp;
+        updatedPet.level = newLevel;
+        
         setPet(updatedPet);
         await updatePetInDatabase(updatedPet);
       }
@@ -644,6 +672,13 @@ export default function PetCare() {
   const handleLogout = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const getGlowClass = (level: number) => {
+    if (level < 5) return 'glowBronze';
+    if (level < 10) return 'glowSilver';
+    if (level < 20) return 'glowGold';
+    return 'glowPlatinum';
   };
 
   const getMoodEmoji = useCallback(() => {
@@ -741,6 +776,7 @@ export default function PetCare() {
         </div>
         <div className="user-bar-buttons">
           <button className="user-bar-btn" onClick={() => navigate('/dashboard')}>Home</button>
+          <button className="user-bar-btn" onClick={() => navigate('/leaderboard')}>Leaderboard</button>
           <button className="user-bar-btn" onClick={() => navigate('/settings')}>Settings</button>
           <button className="user-bar-btn" onClick={handleLogout}>Logout</button>
         </div>
@@ -749,7 +785,7 @@ export default function PetCare() {
       <main className={styles.petCareMain}>
         {/* Pet Display */}
         <div className={styles.petDisplay}>
-          <div className={styles.petAvatar} data-species={pet.species}>
+          <div className={`${styles.petAvatar} ${styles[getGlowClass(pet.level || 1)]}`} data-species={pet.species}>
             {/* Use image instead of emoji */}
             <img 
               src={PET_EMOJIS[pet.species]} 
@@ -760,8 +796,23 @@ export default function PetCare() {
               {getMoodEmoji()}
             </div>
           </div>
+          <div className={styles.levelBadge}>Level {pet.level || 1}</div>
           <h2>{pet.name}</h2>
           <p className={styles.petStatus}>{getPetStatus()}</p>
+          
+          {/* XP Bar - More Prominent */}
+          <div className={styles.xpContainer}>
+             <div className={styles.xpLabel}>Experience</div>
+             <div className={styles.xpBar}>
+                <div 
+                    className={styles.xpFill} 
+                    style={{ width: `${Math.min(100, ((pet.xp || 0) % 500) / 5)}%` }} 
+                />
+             </div>
+             <span className={styles.xpText}>{(pet.xp || 0) % 500} / 500 XP</span>
+          </div>
+          
+          {/* Fun Feature: Inventory Shelf */}
           
           {/* Fun Feature: Inventory Shelf */}
 
@@ -786,7 +837,7 @@ export default function PetCare() {
               { id: 'expenses' as TabType, label: 'Expenses' },
               { id: 'tasks' as TabType, label: 'Tasks' },
               { id: 'budget' as TabType, label: 'Budget' },
-              { id: 'toybox' as TabType, label: 'Toy Box' }, 
+              // Removed Toy Box Tab
               { id: 'achievements' as TabType, label: 'Achievements' },
               { id: 'streak' as TabType, label: 'Streak' },
             ].map(tab => (
@@ -824,53 +875,7 @@ export default function PetCare() {
             </div>
           )}
 
-          {activeTab === 'toybox' && (
-            <div className={styles.tabContent}>
-               <h3>My Toy Collection</h3>
-               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '16px' }}>
-                 {expenses.filter(e => e.expense_type === 'toy').length === 0 ? (
-                   <div className={styles.noData} style={{ gridColumn: '1 / -1' }}>No toys yet! Buy a Mystery Box to start collecting.</div>
-                 ) : (
-                   expenses.filter(e => e.expense_type === 'toy').map(expense => {
-                     const toy = parseToyItem(expense.item_name);
-                     const color = RARITY_COLORS[toy.rarity];
-                     return (
-                       <div 
-                         key={expense.id} 
-                         title={`${toy.name} (${toy.rarity})`} // Tooltip
-                         style={{ 
-                           background: 'rgba(15, 23, 42, 0.4)', 
-                           borderRadius: '12px', 
-                           padding: '16px', 
-                           border: `2px solid ${color}`,
-                           display: 'flex', 
-                           flexDirection: 'column', 
-                           alignItems: 'center', 
-                           gap: '8px',
-                           boxShadow: `0 0 15px ${color}40`,
-                           position: 'relative',
-                           cursor: 'help'
-                         }}
-                       >
-                         <div style={{ fontSize: '2.5rem' }}>{toy.icon}</div>
-                         <div style={{ fontWeight: 600, fontSize: '0.9rem', textAlign: 'center', color: '#f8fafc' }}>{toy.name}</div>
-                         <div style={{ 
-                           fontSize: '0.75rem', 
-                           background: color, 
-                           color: toy.rarity === 'Common' || toy.rarity === 'Legendary' ? 'black' : 'white',
-                           padding: '2px 8px', 
-                           borderRadius: '10px',
-                           fontWeight: 700
-                         }}>
-                           {toy.rarity}
-                         </div>
-                       </div>
-                     );
-                   })
-                 )}
-               </div>
-            </div>
-          )}
+
 
           {activeTab === 'tasks' && (
             <div className={styles.tabContent}>
@@ -1103,7 +1108,7 @@ export default function PetCare() {
       {showPetLostModal && (
         <div className={styles.modalOverlay}>
           <div className={styles.petLostModal}>
-            <div className={styles.petLostIcon}>💔</div>
+            <div className={styles.petLostIcon}>Goodbye</div>
             <h2>Your Pet Has Left</h2>
             <p>
               Unfortunately, <strong>{pet?.name}</strong> wasn't cared for properly and has left you.

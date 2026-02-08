@@ -152,13 +152,165 @@
     font-size: 3rem; /* Larger mood icon */
     animation: pet-pulse 2s ease-in-out infinite;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+/* Level Glow Effects */
+/* Old glow classes removed in favor of ::before implementation */
+
+.levelBadge {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    font-weight: 800;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 1.1rem;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.2);
     z-index: 10;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
-/* Species Specific adjustments */
+.xpContainer {
+    width: 100%;
+    max-width: 320px;
+    margin: 20px auto 10px;
+    text-align: center;
+    padding: 16px 20px;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 16px;
+    border: 2px solid rgba(245, 158, 11, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.xpLabel {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.xpBar {
+    width: 100%;
+    height: 28px;
+    background: #1e293b;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 3px solid #475569;
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.xpFill {
+    height: 100%;
+    min-width: 4px;
+    background: linear-gradient(90deg, #f59e0b, #fbbf24, #fcd34d);
+    border-radius: 12px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 25px rgba(245, 158, 11, 1), inset 0 2px 0 rgba(255,255,255,0.4);
+    position: relative;
+}
+
+.xpFill::after {
+    content: '';
+    position: absolute;
+    top: 0; 
+    left: 0; 
+    right: 0; 
+    bottom: 0;
+    background: linear-gradient(
+        45deg, 
+        rgba(255,255,255,0.2) 25%, 
+        transparent 25%, 
+        transparent 50%, 
+        rgba(255,255,255,0.2) 50%, 
+        rgba(255,255,255,0.2) 75%, 
+        transparent 75%, 
+        transparent
+    );
+    background-size: 20px 20px;
+    animation: stripeMove 1s linear infinite;
+    opacity: 0.5;
+}
+
+@keyframes stripeMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 20px 20px; }
+}
+
+.xpText {
+    font-size: 0.95rem;
+    color: #fbbf24;
+    font-weight: 800;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+    margin-top: 10px;
+    display: inline-block;
+    background: rgba(0,0,0,0.4);
+    padding: 4px 12px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+}
+
+/* Updated Glow Effects - Behind Pet */
+.petAvatar::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+    opacity: 0;
+    transition: all 0.5s ease;
+    z-index: -1;
+}
+
+.glowBronze::before {
+    background: radial-gradient(circle, rgba(205, 127, 50, 0.6) 0%, transparent 70%);
+    box-shadow: 0 0 40px 10px rgba(205, 127, 50, 0.3);
+    opacity: 1;
+}
+
+.glowSilver::before {
+    background: radial-gradient(circle, rgba(192, 192, 192, 0.6) 0%, transparent 70%);
+    box-shadow: 0 0 50px 15px rgba(192, 192, 192, 0.3);
+    opacity: 1;
+}
+
+.glowGold::before {
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, transparent 70%);
+    box-shadow: 0 0 60px 20px rgba(255, 215, 0, 0.4);
+    animation: auraPulse 2s infinite;
+    opacity: 1;
+}
+
+.glowPlatinum::before {
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.6) 0%, transparent 70%);
+    box-shadow: 0 0 70px 25px rgba(59, 130, 246, 0.5);
+    animation: auraPulse 3s infinite;
+    opacity: 1;
+}
+
+@keyframes auraPulse {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+    50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+}
+
+/* Keep drop shadow for image shape definition */
+.petImage {
+    z-index: 2;
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3));
+}
 [data-species="fish"] .petImage { width: 180px; height: 180px; }
 [data-species="bird"] .petImage { width: 120px; height: 120px; }
 [data-species="mouse"] .petImage { width: 100px; height: 100px; }
+}
+
 
 .petDisplay h2 {
     color: #f8fafc;
@@ -1583,3 +1735,5 @@
     font-weight: bold;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
+
+

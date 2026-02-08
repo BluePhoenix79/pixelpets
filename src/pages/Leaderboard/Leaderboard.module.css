@@ -1,0 +1,151 @@
+.leaderboardPage {
+    padding: 24px;
+    max-width: 800px;
+    margin: 0 auto;
+    color: #e2e8f0;
+    padding-bottom: 80px; /* Space for user bar */
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    margin: 0;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+}
+
+.tab {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 24px;
+    border-radius: 12px;
+    color: #94a3b8;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+}
+
+.tab.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.leaderboardList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rankCard {
+    display: flex;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(10px);
+    padding: 16px 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.rankCard:hover {
+    transform: translateX(4px);
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.rankPosition {
+    font-size: 1.5rem;
+    font-weight: 800;
+    width: 40px;
+    color: #64748b;
+}
+
+.rank1 .rankPosition { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
+.rank2 .rankPosition { color: #94a3b8; text-shadow: 0 0 10px rgba(148, 163, 184, 0.5); }
+.rank3 .rankPosition { color: #b45309; text-shadow: 0 0 10px rgba(180, 83, 9, 0.5); }
+
+.userInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.username {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #f1f5f9;
+}
+
+.subtext {
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+.score {
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: #3b82f6;
+    text-align: right;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #94a3b8;
+    font-size: 1.1rem;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 40px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    color: #94a3b8;
+}
+
+/* Back Button */
+.backBtn {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.backBtn:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+}

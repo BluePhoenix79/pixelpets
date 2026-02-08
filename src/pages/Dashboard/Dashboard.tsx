@@ -152,6 +152,9 @@ export default function Dashboard() {
           <h1 className={styles.logo}>PixelPets</h1>
         </div>
         <div className={styles.headerActions}>
+          <button className={styles.settingsBtn} onClick={() => navigate('/leaderboard')}>
+            Leaderboard
+          </button>
           <button className={styles.settingsBtn} onClick={() => navigate('/settings')}>
             Settings
           </button>
@@ -215,7 +218,7 @@ export default function Dashboard() {
               </div>
               {balance < 50 && (
                 <p style={{ color: '#ef4444', marginTop: '12px', fontSize: '0.9rem' }}>
-                  ⚠️ You need $50 to adopt a pet. Complete tasks to earn more!
+                  You need $50 to adopt a pet. Complete tasks to earn more!
                 </p>
               )}
             </form>

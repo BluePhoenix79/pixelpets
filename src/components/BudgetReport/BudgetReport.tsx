@@ -131,17 +131,83 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
               {insights.mostExpensive.item_name} <span style={{ color: '#ef4444' }}>(-${insights.mostExpensive.amount})</span>
             </div>
           </div>
+          <div>
+            <div style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '4px' }}>Total Transactions</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc' }}>
+              {expenses.length} purchases
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top 5 Expenses */}
+      {expenses.length > 0 && (
+        <div style={{ marginBottom: '24px' }}>
+          <h4 style={{ color: '#f8fafc', marginBottom: '12px' }}>Top 5 Expenses</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[...expenses].sort((a, b) => b.amount - a.amount).slice(0, 5).map((expense, i) => (
+              <div key={expense.id} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 16px',
+                background: 'rgba(15, 23, 42, 0.4)',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ 
+                    width: '24px', 
+                    height: '24px', 
+                    borderRadius: '50%', 
+                    background: i === 0 ? '#fbbf24' : i === 1 ? '#94a3b8' : i === 2 ? '#cd7f32' : '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: i < 3 ? '#0f172a' : '#f8fafc'
+                  }}>
+                    {i + 1}
+                  </span>
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#f8fafc' }}>{expense.item_name}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94a3b8', textTransform: 'capitalize' }}>{expense.expense_type}</div>
+                  </div>
+                </div>
+                <span style={{ fontWeight: 700, color: '#ef4444' }}>-${expense.amount}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginBottom: '20px' }}>
+        <button 
+           onClick={() => {
+             const csvContent = 'data:text/csv;charset=utf-8,' 
+               + 'Date,Category,Item,Amount\n'
+               + expenses.map(e => `${new Date(e.created_at).toLocaleDateString()},${e.expense_type},${e.item_name},${e.amount}`).join('\n');
+             const link = document.createElement('a');
+             link.setAttribute('href', encodeURI(csvContent));
+             link.setAttribute('download', `pixelpets_expenses_${new Date().toISOString().split('T')[0]}.csv`);
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+           }}
+           style={{ 
+             background: '#22c55e', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600
+           }}
+        >
+          Export CSV
+        </button>
         <button 
            onClick={() => window.print()}
            style={{ 
-             background: '#475569', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 600
+             background: '#475569', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600
            }}
         >
-          🖨️ Download / Print Report
+          Print Report
         </button>
       </div>
 
@@ -207,7 +273,7 @@ export const BudgetReport: React.FC<BudgetReportProps> = ({
               </div>
               {balance >= savingsGoal && (
                 <div className={styles.goalReached}>
-                  🎉 Goal Reached! Great saving habits!
+                  Goal Reached! Great saving habits!
                 </div>
               )}
             </div>

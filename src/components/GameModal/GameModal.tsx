@@ -81,7 +81,7 @@ export default function GameModal({ game, onComplete, onClose, reward, generated
         {result && (
           <div className={`${styles.resultMessage} ${result.success ? styles.success : styles.failure}`}>
             <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>
-              {result.success ? '🎉 Well Done!' : '❌ Incorrect'}
+              {result.success ? 'Well Done!' : 'Incorrect'}
             </div>
             {result.success && <img src={trophyImg} alt="success" style={{ width: '24px', height: '24px', marginRight: '8px', verticalAlign: 'middle' }} />}
             {!result.success && <img src={warningImg} alt="error" style={{ width: '24px', height: '24px', marginRight: '8px', verticalAlign: 'middle' }} />}
@@ -378,8 +378,8 @@ function QuickSortGame({ game, onSuccess, onFailure }: { game: QuickSort; onSucc
             <span className={styles.sortNumber}>{index + 1}</span>
             <span className={styles.sortText}>{item}</span>
             <div className={styles.sortButtons}>
-              <button onClick={() => moveItem(index, 'up')} disabled={index === 0}>↑</button>
-              <button onClick={() => moveItem(index, 'down')} disabled={index === order.length - 1}>↓</button>
+              <button onClick={() => moveItem(index, 'up')} disabled={index === 0}>Up</button>
+              <button onClick={() => moveItem(index, 'down')} disabled={index === order.length - 1}>Down</button>
             </div>
           </div>
         ))}

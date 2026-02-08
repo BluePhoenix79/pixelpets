@@ -12,7 +12,18 @@ export interface Pet {
   cleanliness: number;
   health: number;
   love: number;
+  xp: number;
+  level: number;
+  show_on_leaderboard?: boolean;
   last_updated: string;
+  created_at: string;
+}
+
+// User Profile for leaderboard settings
+export interface UserProfile {
+  user_id: string;
+  username: string;
+  show_on_leaderboard: boolean;
   created_at: string;
 }
 

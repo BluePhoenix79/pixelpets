@@ -6,6 +6,7 @@ import Auth from './pages/Auth/Auth';
 import Dashboard from './pages/Dashboard/Dashboard';
 import PetCare from './pages/PetCare/PetCare';
 import Settings from './pages/Settings/Settings';
+import Leaderboard from './pages/Leaderboard/Leaderboard';
 import './index.css';
 
 // Protected Route wrapper
@@ -63,6 +64,11 @@ function AppRoutes() {
       <Route path="/settings" element={
         <ProtectedRoute>
           <Settings />
+        </ProtectedRoute>
+      } />
+      <Route path="/leaderboard" element={
+        <ProtectedRoute>
+          <Leaderboard />
         </ProtectedRoute>
       } />
       

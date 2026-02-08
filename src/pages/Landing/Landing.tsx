@@ -64,7 +64,7 @@ export default function Landing() {
           
           <div className={styles.scrollIndicator}>
             <span>SCROLL FOR INFO</span>
-            <div className={styles.arrow}>↓</div>
+            <div className={styles.arrow}>v</div>
           </div>
         </div>
       </section>
