@@ -181,13 +181,7 @@ export const MEMORY_MATCHES: MemoryMatch[] = [
 // QUICK SORT - FBLA & Business Prioritization
 // ============================================
 export const QUICK_SORTS: QuickSort[] = [
-  {
-    type: 'quick_sort',
-    instruction: "Order these FBLA competitive event categories from TEAM to INDIVIDUAL:",
-    items: ["Parliamentary Procedure (Team)", "Public Speaking (Individual)", "Business Plan (Team)", "Impromptu Speaking (Individual)"],
-    correctOrder: ["Parliamentary Procedure (Team)", "Business Plan (Team)", "Public Speaking (Individual)", "Impromptu Speaking (Individual)"],
-    category: "FBLA Events"
-  },
+
   {
     type: 'quick_sort',
     instruction: "Order these business startup steps from FIRST to LAST:",

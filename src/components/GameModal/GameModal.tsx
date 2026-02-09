@@ -378,8 +378,8 @@ function QuickSortGame({ game, onSuccess, onFailure }: { game: QuickSort; onSucc
             <span className={styles.sortNumber}>{index + 1}</span>
             <span className={styles.sortText}>{item}</span>
             <div className={styles.sortButtons}>
-              <button onClick={() => moveItem(index, 'up')} disabled={index === 0}>Up</button>
-              <button onClick={() => moveItem(index, 'down')} disabled={index === order.length - 1}>Down</button>
+              <button onClick={() => moveItem(index, 'up')} disabled={index === 0}>↑</button>
+              <button onClick={() => moveItem(index, 'down')} disabled={index === order.length - 1}>↓</button>
             </div>
           </div>
         ))}

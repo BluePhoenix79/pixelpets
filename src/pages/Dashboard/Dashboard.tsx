@@ -44,7 +44,13 @@ export default function Dashboard() {
         const savedBalance = localStorage.getItem('pixelpets_guest_balance');
         const savedPets = localStorage.getItem('pixelpets_guest_pets');
         
-        if (savedBalance) setBalance(parseFloat(savedBalance));
+        let balanceToSet = savedBalance ? parseFloat(savedBalance) : 0;
+        if (balanceToSet === 0) {
+            balanceToSet = 50;
+            localStorage.setItem('pixelpets_guest_balance', '50');
+        }
+
+        setBalance(balanceToSet);
         if (savedPets) setPets(JSON.parse(savedPets));
         return;
     }
@@ -58,7 +64,12 @@ export default function Dashboard() {
       .maybeSingle();
 
     if (financeData) {
-      setBalance(financeData.balance);
+      if (financeData.balance === 0) {
+          await supabase.from('user_finances').update({ balance: 50 }).eq('user_id', user.id);
+          setBalance(50);
+      } else {
+          setBalance(financeData.balance);
+      }
     }
 
     const { data: petsData } = await supabase
@@ -140,6 +151,8 @@ export default function Dashboard() {
     }
 
     // Deduct the pet adoption cost
+    if (!user) return;
+    
     const { error: financeError } = await supabase.from('user_finances').update({
       balance: balance - PET_COST
     }).eq('user_id', user.id);

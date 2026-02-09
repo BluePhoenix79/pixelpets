@@ -256,8 +256,48 @@ export default function PetCare() {
 
   const loadDailyStreak = async () => {
     if (isGuest) {
-        // Guest Streak Logic - Simple Local Check
-        return; // TODO: Implement guest streak if needed, skipping for now
+        const streakData = localStorage.getItem('pixelpets_guest_streak');
+        if (streakData) {
+            const { currentStreak, lastLoginDate, loginDates } = JSON.parse(streakData);
+            const todayStr = new Date().toISOString().split('T')[0];
+            
+            if (lastLoginDate !== todayStr) {
+                 const yesterdayDate = new Date();
+                 yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+                 const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+                 
+                 let newStreak = currentStreak;
+                 let newLoginDates = [...loginDates];
+                 
+                 if (lastLoginDate === yesterdayStr) {
+                     newStreak++;
+                 } else {
+                     newStreak = 1; // Reset if missed a day
+                 }
+                 
+                 if (!newLoginDates.includes(todayStr)) {
+                     newLoginDates.push(todayStr);
+                 }
+                 
+                 const newData = { currentStreak: newStreak, lastLoginDate: todayStr, loginDates: newLoginDates };
+                 localStorage.setItem('pixelpets_guest_streak', JSON.stringify(newData));
+                 setDailyStreak(newStreak);
+                 setLoginDates(newLoginDates);
+                 if (newStreak > currentStreak) addPopup(`${newStreak} Day Streak!`, <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+            } else {
+                setDailyStreak(currentStreak);
+                setLoginDates(loginDates);
+            }
+        } else {
+            // First time guest
+             const todayStr = new Date().toISOString().split('T')[0];
+             const newData = { currentStreak: 1, lastLoginDate: todayStr, loginDates: [todayStr] };
+             localStorage.setItem('pixelpets_guest_streak', JSON.stringify(newData));
+             setDailyStreak(1);
+             setLoginDates([todayStr]);
+             addPopup('1 Day Streak!', <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+        }
+        return; 
     }
     if (!user) return;
     
@@ -382,7 +422,7 @@ export default function PetCare() {
       { id: 'well_fed', name: 'Gourmet Chef', icon: <img src={foodImg} className={styles.pixelIcon} alt="food" />, check: hasPlayedGame && pet.hunger >= 80 },
       { id: 'clean_pet', name: 'Squeaky Clean', icon: <img src={cleanlinessImg} className={styles.pixelIcon} alt="clean" />, check: hasPlayedGame && pet.cleanliness >= 85 },
       { id: 'energetic', name: 'Full of Energy', icon: <img src={energyImg} className={styles.pixelIcon} alt="energy" />, check: hasPlayedGame && pet.energy >= 75 },
-      { id: 'loved_pet', name: 'Best Friends', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, check: hasPlayedGame && (pet.love || 50) >= 80 },
+      { id: 'loved_pet', name: 'Best Friends', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, check: hasPlayedGame && (pet.love ?? 50) >= 80 },
       // Task/streak achievements naturally require gameplay
       { id: 'streak_3', name: 'Streak Starter', icon: <img src={fireImg} className={styles.pixelIcon} alt="fire" />, check: answerStreak >= 3 },
       { id: 'streak_10', name: 'On Fire', icon: <img src={strongArmImg} className={styles.pixelIcon} alt="muscle" />, check: answerStreak >= 10 },
@@ -411,17 +451,21 @@ export default function PetCare() {
 
       if (achievement.check && !isAlreadyUnlocked) {
         // Unlock achievement
-        if (!isGuest && user) {
+        if (isGuest) {
+             const newUnlocked = [...unlockedAchievements, { id: achievement.id, petId: petId as string }];
+             setUnlockedAchievements(newUnlocked);
+             localStorage.setItem('pixelpets_guest_achievements', JSON.stringify(newUnlocked));
+        } else if (user) {
             await supabase.from('achievements').insert({
             user_id: user.id,
             pet_id: petId, // Always tag with current pet, even only for history
             achievement_id: achievement.id,
             completed_at: new Date().toISOString()
             });
+            // Update local state locally to prevent immediate duplicate
+            setUnlockedAchievements(prev => [...prev, { id: achievement.id, petId: petId as string }]);
         }
         
-        // Update local state locally to prevent immediate duplicate
-        setUnlockedAchievements(prev => [...prev, { id: achievement.id, petId: petId as string }]);
         addPopup(achievement.name, achievement.icon, achievement.id);
       }
     });
@@ -430,7 +474,9 @@ export default function PetCare() {
 
   const loadTotalTasksCompleted = async () => {
     if (isGuest) {
-        return; // No task history for guest yet
+        const stored = localStorage.getItem('pixelpets_guest_total_tasks');
+        if (stored) setTotalTasksCompleted(parseInt(stored));
+        return; 
     }
     if (!user) return;
     const { count } = await supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('completed', true);
@@ -440,11 +486,25 @@ export default function PetCare() {
   const loadBalance = async () => {
     if (isGuest) {
         const b = localStorage.getItem('pixelpets_guest_balance');
-        if (b) setBalance(parseFloat(b));
+        let currentBal = b ? parseFloat(b) : 0;
+        if (currentBal === 0) {
+             currentBal = 50;
+             localStorage.setItem('pixelpets_guest_balance', '50');
+             addPopup('Emergency Funds!', <img src={moneyBagImg} className={styles.pixelIcon} alt="money" />);
+        }
+        setBalance(currentBal);
         return;
     }
     const { data } = await supabase.from('user_finances').select('balance').eq('user_id', user!.id).maybeSingle();
-    if (data) setBalance(data.balance);
+    if (data) {
+        if (data.balance === 0) {
+            await supabase.from('user_finances').update({ balance: 50 }).eq('user_id', user!.id);
+            setBalance(50);
+            addPopup('Emergency Funds!', <img src={moneyBagImg} className={styles.pixelIcon} alt="money" />);
+        } else {
+            setBalance(data.balance);
+        }
+    }
   };
 
   const loadExpenses = async () => {
@@ -497,7 +557,14 @@ export default function PetCare() {
   };
 
   const loadAchievements = async () => {
-    if (isGuest) return; // No persistence for guest achievements yet
+    if (isGuest) {
+         const stored = localStorage.getItem('pixelpets_guest_achievements');
+         if (stored) {
+             setUnlockedAchievements(JSON.parse(stored));
+         }
+         setAchievementsLoaded(true);
+         return; 
+    }
     // Load ALL achievements for this user to support global achievements (Tasks, Streak, Balance)
     const { data } = await supabase.from('achievements').select('achievement_id, pet_id').eq('user_id', user!.id);
     if (data) {
@@ -730,26 +797,15 @@ export default function PetCare() {
       
       // Increase pet love when completing tasks
       if (pet) {
-        let updatedPet = { ...pet, love: Math.min(100, (pet.love || 50) + 5) };
+        let updatedPet = { ...pet, love: Math.min(100, (pet.love ?? 50) + 5) };
         
-        // XP & Level Up Logic
-        const xpGain = 100; // Fixed 100 XP per task
-        const currentLevel = updatedPet.level || 1;
-        const xpToLevel = getXPForNextLevel(currentLevel);
-        let newXp = (updatedPet.xp || 0) + xpGain;
-        let newLevel = currentLevel;
+        // XP Logic REMOVED - Tasks only give money now.
+        // const xpGain = 100; 
         
-        if (newXp >= xpToLevel) {
-            newLevel += 1;
-            newXp = newXp - xpToLevel;
-            addPopup(`Level Up! ${newLevel}`, <img src={starImg} className={styles.pixelIcon} alt="level-up" />);
-            // Bonus stats on level up
-            updatedPet.happiness = 100;
-            updatedPet.energy = 100;
-        }
+        updatedPet.xp = pet.xp;
+        updatedPet.level = pet.level;
         
-        updatedPet.xp = newXp;
-        updatedPet.level = newLevel;
+
         
         setPet(updatedPet);
         await updatePetInDatabase(updatedPet);
@@ -759,6 +815,10 @@ export default function PetCare() {
           const newBalance = balance + totalReward;
           localStorage.setItem('pixelpets_guest_balance', newBalance.toString());
           setBalance(newBalance);
+          
+          // Persist total tasks
+          localStorage.setItem('pixelpets_guest_total_tasks', (totalTasksCompleted + 1).toString());
+          
       } else if (user) {
         const { data: currentFinance } = await supabase.from('user_finances').select('*').eq('user_id', user.id).single();
         if (currentFinance) {
@@ -914,7 +974,6 @@ export default function PetCare() {
               {getMoodEmoji()}
             </div>
           </div>
-          <div className={styles.levelBadge}>Level {pet.level || 1}</div>
           <h2>{pet.name}</h2>
           <p className={styles.petStatus}>{getPetStatus()}</p>
           
@@ -923,12 +982,12 @@ export default function PetCare() {
              <div className={styles.xpInfoRow}>
                 {/* Minimal Labels: Level on left, XP on right */}
                 <span className={styles.xpLevelText}>Lvl {pet.level || 1}</span>
-                <span className={styles.xpLevelText} style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>{(pet.xp || 0)} / 100 XP</span>
+                <span className={styles.xpLevelText} style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>{(pet.xp || 0)} / {getXPForNextLevel(pet.level || 1)} XP</span>
              </div>
              <div className={styles.xpTrack}>
                 <div 
                     className={styles.xpFill} 
-                    style={{ width: `${(pet.xp || 0)}%` }} 
+                    style={{ width: `${Math.min(100, ((pet.xp || 0) / getXPForNextLevel(pet.level || 1)) * 100)}%` }} 
                 />
              </div>
           </div>
@@ -1066,7 +1125,7 @@ export default function PetCare() {
                   { id: 'well_fed', name: 'Gourmet Chef', description: 'Keep hunger above 80%', icon: <img src={foodImg} className={styles.pixelIcon} alt="food" />, check: pet.hunger >= 80 },
                   { id: 'clean_pet', name: 'Squeaky Clean', description: 'Maintain cleanliness above 85%', icon: <img src={cleanlinessImg} className={styles.pixelIcon} alt="clean" />, check: pet.cleanliness >= 85 },
                   { id: 'energetic', name: 'Full of Energy', description: 'Keep energy above 75%', icon: <img src={energyImg} className={styles.pixelIcon} alt="energy" />, check: pet.energy >= 75 },
-                  { id: 'loved_pet', name: 'Best Friends', description: 'Reach 80+ love with your pet', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, check: (pet.love || 50) >= 80 },
+                  { id: 'loved_pet', name: 'Best Friends', description: 'Reach 80+ love with your pet', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, check: (pet.love ?? 50) >= 80 },
                   { id: 'streak_3', name: 'Streak Starter', description: 'Get a 3 answer streak', icon: <img src={fireImg} className={styles.pixelIcon} alt="fire" />, check: answerStreak >= 3 },
                   { id: 'streak_10', name: 'On Fire', description: 'Get a 10 answer streak', icon: <img src={strongArmImg} className={styles.pixelIcon} alt="muscle" />, check: answerStreak >= 10 },
                   { id: 'tasks_5', name: 'Task Beginner', description: 'Complete 5 tasks', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: totalTasksCompleted >= 5 },
@@ -1251,10 +1310,16 @@ export default function PetCare() {
               onClick={async () => {
                 // Delete the pet from database
                 if (pet?.id) {
-                  const { error } = await supabase.from('pets').delete().eq('id', pet.id);
-                  if (error) {
-                    alert('Error removing pet: ' + error.message);
-                    return;
+                  if (isGuest) {
+                      const savedPets = JSON.parse(localStorage.getItem('pixelpets_guest_pets') || '[]');
+                      const updatedPets = savedPets.filter((p: any) => p.id !== pet.id);
+                      localStorage.setItem('pixelpets_guest_pets', JSON.stringify(updatedPets));
+                  } else {    
+                      const { error } = await supabase.from('pets').delete().eq('id', pet.id);
+                      if (error) {
+                        alert('Error removing pet: ' + error.message);
+                        return;
+                      }
                   }
                 }
                 navigate('/dashboard');
