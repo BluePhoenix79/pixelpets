@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -9,8 +9,25 @@ export default function CompleteProfile() {
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, hasProfile, loading } = useAuth();
   const navigate = useNavigate();
+
+  // Effect to redirect if already has profile
+  useEffect(() => {
+      if (hasProfile && !loading) {
+          navigate('/dashboard', { replace: true });
+      }
+  }, [hasProfile, loading, navigate]);
+
+  if (loading || hasProfile) {
+      return (
+        <div className={styles.authPage}>
+          <div style={{ color: 'white', textAlign: 'center', marginTop: '20vh' }}>
+            <h2>Loading...</h2>
+          </div>
+        </div>
+      );
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

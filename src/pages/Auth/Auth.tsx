@@ -36,7 +36,11 @@ export default function Auth() {
     const { error } = await signIn(loginEmail, loginPassword);
 
     if (error) {
-      setMessage({ text: error.message, type: 'error' });
+      let errorMsg = error.message;
+      if (errorMsg.includes('Invalid login credentials')) {
+          errorMsg += ' (If you signed up with Google, please use the Google button)';
+      }
+      setMessage({ text: errorMsg, type: 'error' });
     } else {
       navigate('/dashboard');
     }
