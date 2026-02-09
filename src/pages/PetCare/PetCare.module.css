@@ -215,11 +215,11 @@
 .xpFill {
     height: 100%;
     min-width: 8px;
-    /* Vibrant Gradient */
-    background: linear-gradient(90deg, #8b5cf6, #d946ef, #f472b6);
+    /* FBLA Colors: Blue #00529b, Gold #f7bd00 */
+    background: linear-gradient(90deg, #00529b, #f7bd00);
     border-radius: 100px;
     transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy fill */
-    box-shadow: 0 0 15px rgba(217, 70, 239, 0.6); /* Glow */
+    box-shadow: 0 0 15px rgba(247, 189, 0, 0.6); /* Gold Glow */
     position: relative;
     width: 0%; /* Default */
 }

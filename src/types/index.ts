@@ -103,6 +103,9 @@ export interface FBLAQuestion {
   question: string;
   options: string[];
   answer: number;
+  explanation?: string;
+  category?: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
 }
 
 // Action Types

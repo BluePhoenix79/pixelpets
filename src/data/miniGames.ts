@@ -1,9 +1,19 @@
-// FBLA-Themed Educational Mini-Games
+import { FBLA_QUESTIONS } from './fblaQuestions';
+
+// ... (previous interfaces) ...
 
 // ============================================
-// EDUCATIONAL MINI-GAMES FOR TASK COMPLETION
-// All games are FBLA (Future Business Leaders of America) themed
+// TRIVIA GAMES - FBLA Knowledge
 // ============================================
+export const TRIVIA_GAMES: TriviaGame[] = FBLA_QUESTIONS.map(q => ({
+    type: 'trivia',
+    question: q.question,
+    options: q.options,
+    answer: q.answer,
+    explanation: q.explanation || "Correct!",
+    category: q.category || "FBLA General",
+    generatedBy: "FBLA Question Bank"
+}));
 
 // Game types available (no math_challenge)
 export type GameType = 'budget_puzzle' | 'memory_match' | 'quick_sort' | 'trivia';
@@ -201,29 +211,7 @@ export const QUICK_SORTS: QuickSort[] = [
   },
 ];
 
-// ============================================
-// TRIVIA GAMES - FBLA Knowledge
-// ============================================
-export const TRIVIA_GAMES: TriviaGame[] = [
-  { type: 'trivia', question: "What does FBLA stand for?", options: ["Future Business Leaders of America", "Federal Business Loan Association", "Financial Business Learning Academy", "First Business League Award"], answer: 0, explanation: "FBLA - Future Business Leaders of America - prepares students for careers in business!", category: "FBLA Basics" },
-  { type: 'trivia', question: "What is the FBLA motto?", options: ["Success Through Leadership", "Service, Education, and Progress", "Business First, Always", "Learn, Lead, Succeed"], answer: 1, explanation: "FBLA's motto 'Service, Education, and Progress' guides all members!", category: "FBLA Basics" },
-  { type: 'trivia', question: "What are FBLA's official colors?", options: ["Red and White", "Blue and Gold", "Green and Silver", "Purple and Black"], answer: 1, explanation: "Blue and Gold are FBLA's official colors!", category: "FBLA Basics" },
-  { type: 'trivia', question: "When was FBLA founded?", options: ["1920", "1940", "1960", "1980"], answer: 1, explanation: "FBLA was founded in 1940 and has been developing business leaders ever since!", category: "FBLA History" },
-  { type: 'trivia', question: "What is the highest level of FBLA competition?", options: ["Local", "District", "State", "National"], answer: 3, explanation: "National Leadership Conference (NLC) is FBLA's highest competition level!", category: "FBLA Competitions" },
-  { type: 'trivia', question: "What does an entrepreneur do?", options: ["Works for the government", "Starts and runs their own business", "Only invests in stocks", "Teaches business classes"], answer: 1, explanation: "Entrepreneurs take risks to start and run their own businesses!", category: "Business Basics" },
-  { type: 'trivia', question: "What is 'networking' in business?", options: ["Setting up computer networks", "Building professional relationships", "Using social media only", "Sending emails"], answer: 1, explanation: "Networking means building valuable professional relationships!", category: "Business Skills" },
-  { type: 'trivia', question: "What is a business plan?", options: ["A company's daily schedule", "A document outlining business goals and strategies", "A list of employees", "The company's website"], answer: 1, explanation: "A business plan outlines goals, strategies, and how to achieve success!", category: "Entrepreneurship" },
-  { type: 'trivia', question: "What does 'professional attire' mean at FBLA events?", options: ["Casual clothes", "Business formal dress code", "Athletic wear", "Costumes"], answer: 1, explanation: "Professional attire means business formal - suit, tie, professional dress!", category: "FBLA Etiquette" },
-  { type: 'trivia', question: "What is the FBLA creed's first line about?", options: ["Making money", "Education as the right of every person", "Winning competitions", "Starting businesses"], answer: 1, explanation: "The FBLA Creed begins: 'I believe education is the right of every person.'", category: "FBLA Basics" },
-  { type: 'trivia', question: "What is 'Parliamentary Procedure'?", options: ["A type of government document", "Rules for running meetings effectively", "A legal requirement", "A competitive sport"], answer: 1, explanation: "Parliamentary Procedure helps run organized, fair, and efficient meetings!", category: "FBLA Skills" },
-  { type: 'trivia', question: "What is business ethics?", options: ["How to make the most money", "Moral principles guiding business behavior", "A type of accounting", "Business law"], answer: 1, explanation: "Business ethics are moral principles that guide proper business conduct!", category: "Business Basics" },
-  { type: 'trivia', question: "What is FBLA-PBL?", options: ["A different organization", "FBLA at the college level", "An FBLA award", "An FBLA conference"], answer: 1, explanation: "PBL (Phi Beta Lambda) is FBLA for college and university students!", category: "FBLA Basics" },
-  { type: 'trivia', question: "What makes a good leader?", options: ["Always being in charge", "Listening to others and making ethical decisions", "Never admitting mistakes", "Working alone"], answer: 1, explanation: "Good leaders listen, collaborate, and make ethical decisions!", category: "Leadership" },
-  { type: 'trivia', question: "What is 'public speaking' in FBLA?", options: ["Talking to friends", "A competitive event with prepared speeches", "Reading from notes", "Group discussions"], answer: 1, explanation: "FBLA Public Speaking is a competitive event with prepared 4-minute speeches!", category: "FBLA Events" },
-  { type: 'trivia', question: "What is 'supply and demand'?", options: ["A store policy", "Economic principle determining price and quantity", "Making demands provided by a supplier", "None of the above"], answer: 1, explanation: "Supply and demand explains how markets determine prices!", category: "Economics" },
-  { type: 'trivia', question: "What is a 'resume'?", options: ["A summary of a book", "A document listing qualifications for a job", "A resignation letter", "A business receipt"], answer: 1, explanation: "A resume showcases your skills and experience to employers!", category: "Career Development" },
-  { type: 'trivia', question: "What does 'CEO' stand for?", options: ["Chief Executive Officer", "Company Employee Organizer", "Central Economic Office", "Chief Energy Operator"], answer: 0, explanation: "CEO stands for Chief Executive Officer, the highest-ranking executive!", category: "Business Roles" }
-];
+
 
 // ============================================
 // GAME SELECTION & HELPERS

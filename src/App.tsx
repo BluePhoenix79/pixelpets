@@ -4,6 +4,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import Landing from './pages/Landing/Landing';
 import Auth from './pages/Auth/Auth';
 import CompleteProfile from './pages/Auth/CompleteProfile';
+import AdminPanel from './components/AdminPanel/AdminPanel';
 import Dashboard from './pages/Dashboard/Dashboard';
 import PetCare from './pages/PetCare/PetCare';
 import Settings from './pages/Settings/Settings';
@@ -96,6 +97,7 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <AppRoutes />
+          <AdminPanel />
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
