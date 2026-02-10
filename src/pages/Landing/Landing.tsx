@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext'; // Import Auth Context
 import styles from './Landing.module.css';
 import dogImg from '../../assets/dog.png';
 import catImg from '../../assets/cat.png';
@@ -7,6 +8,14 @@ import mouseImg from '../../assets/mouse.png';
 
 export default function Landing() {
   const infoSectionRef = useRef<HTMLElement>(null);
+  const { user } = useAuth(); // Add useAuth hook
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   // Scroll animation with IntersectionObserver
   useEffect(() => {
