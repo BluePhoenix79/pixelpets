@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { getFinances, createFinances, patchFinances } from './api';
 import type { UserFinances } from '../types';
 
 /**
@@ -9,27 +9,23 @@ import type { UserFinances } from '../types';
  */
 export async function increaseBalance(userId: string, amount: number): Promise<UserFinances | null> {
   if (!userId || amount === undefined || amount === null) return null;
-
-  const { data, error } = await supabase.rpc('increase_balance', {
-    user_id_in: userId,
-    amount_in: amount
-  });
-
-  if (error) {
-    console.error('Failed increasing balance', error);
+  try {
+    const current = await getFinances(userId);
+    if (!current) {
+      // create with initial balance + amount
+      const initial = 50 + amount;
+      const created = await createFinances({ user_id: userId, balance: initial, total_earned: initial, total_spent: 0 });
+      return created || null;
+    }
+    const updated = await patchFinances(userId, {
+      balance: (current.balance || 0) + amount,
+      total_earned: (current.total_earned || 0) + amount,
+    });
+    return updated || null;
+  } catch (err) {
+    console.error('Failed increasing balance', err);
     return null;
   }
-
-  if (!data) {
-    return null;
-  }
-
-  // The RPC function returns a single object, but the client library may wrap it in an array
-  if (Array.isArray(data)) {
-    return data.length > 0 ? data[0] : null;
-  }
-
-  return data && (data as UserFinances[]).length > 0 ? (data as UserFinances[])[0] : null;
 }
 
 /**
@@ -38,18 +34,21 @@ export async function increaseBalance(userId: string, amount: number): Promise<U
  */
 export async function decreaseBalance(userId: string, amount: number): Promise<UserFinances | null> {
   if (!userId || amount === undefined || amount === null) return null;
-
-  const { data, error } = await supabase.rpc('decrease_balance', {
-    user_id_in: userId,
-    amount_in: amount
-  });
-
-  if (error) {
-    console.error('Failed decreasing balance', error);
+  try {
+    const current = await getFinances(userId);
+    if (!current) {
+      console.error('No finance row to decrease');
+      return null;
+    }
+    const updated = await patchFinances(userId, {
+      balance: (current.balance || 0) - amount,
+      total_spent: (current.total_spent || 0) + amount,
+    });
+    return updated || null;
+  } catch (err) {
+    console.error('Failed decreasing balance', err);
     return null;
   }
-
-  return data && (data as UserFinances[]).length > 0 ? (data as UserFinances[])[0] : null;
 }
 
 /**
@@ -60,33 +59,14 @@ export async function decreaseBalance(userId: string, amount: number): Promise<U
  */
 export async function ensureFinance(userId: string): Promise<UserFinances | null> {
   if (!userId) return null;
-
-  const { data: finance, error: readErr } = await supabase
-    .from('user_finances')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (readErr) {
-    console.error('Failed reading finances', readErr);
+  try {
+    const finance = await getFinances(userId);
+    if (finance) return finance as UserFinances;
+    const initial = 50;
+    const created = await createFinances({ user_id: userId, balance: initial, total_earned: initial, total_spent: 0 });
+    return created as UserFinances || { user_id: userId, balance: initial, total_earned: initial, total_spent: 0 };
+  } catch (err) {
+    console.error('Failed ensuring finances', err);
     return null;
   }
-
-  if (finance) return finance as UserFinances;
-
-  // Create with default starting balance ($50 = enough for first pet)
-  const initial = 50;
-  const { data: inserted, error: insertErr } = await supabase.from('user_finances').insert({
-    user_id: userId,
-    balance: initial,
-    total_earned: initial,
-    total_spent: 0
-  }).select().maybeSingle();
-
-  if (insertErr) {
-    console.error('Failed creating finance row', insertErr);
-    return null;
-  }
-
-  return inserted as UserFinances || { user_id: userId, balance: initial, total_earned: initial, total_spent: 0 };
 }
