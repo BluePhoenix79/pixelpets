@@ -178,7 +178,7 @@ export default function Dashboard() {
       created_at: new Date().toISOString()
     };
 
-    const { data: insertedPet, error } = await supabase.from('pets').insert(newPetData).select().single();
+    const { error } = await supabase.from('pets').insert(newPetData).select().single();
 
     if (error) {
       // Refund if pet creation failed
