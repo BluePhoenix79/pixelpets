@@ -83,12 +83,21 @@ export default function Leaderboard() {
                 
                 entries = pets
                     .filter(p => p.show_on_leaderboard !== false)
-                    .map(p => ({
-                        id: p.id,
-                        username: p.name,
-                        value: p.level || 1,
-                        subtext: `${profileMap.get(p.owner_id)?.username || 'Unknown'} • ${p.xp || 0} XP`
-                    }));
+                    .map(p => {
+                        // Formula: TotalXP = 50 * L * (L-1) + currentXP
+                        const lvl = p.level || 1;
+                        const totalXP = (50 * lvl * (lvl - 1)) + (p.xp || 0);
+                        return {
+                            id: p.id,
+                            username: p.name,
+                            value: totalXP, // Show Total XP as the primary value? Or keep Level? User said "show total xp"
+                            // If user wants to rank by Total XP, I should probably render Total XP as the value.
+                            // But wait, the sort was by Level then XP, which is effectively Total XP.
+                            // Let's show Level in subtext and Total XP as main value?
+                            // Or "Lvl 5 • 2500 Total XP"
+                            subtext: `${p.level} Level(s) • ${profileMap.get(p.owner_id)?.username || 'Unknown'}`
+                        };
+                    });
             }
         } else if (activeTab === 'streak') {
             const { data: streaks, error: streakError } = await supabase
@@ -136,7 +145,7 @@ export default function Leaderboard() {
 
   const formatValue = (val: number) => {
       if (activeTab === 'balance') return `$${val.toFixed(2)}`;
-      if (activeTab === 'level') return `Lvl ${val}`;
+      if (activeTab === 'level') return `${val.toLocaleString()} XP`;
       return `${val} Day(s)`;
   };
 

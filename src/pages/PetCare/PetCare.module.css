@@ -349,8 +349,8 @@
     transform: translateY(-4px);
     background: rgba(30, 41, 59, 0.9);
     /* Dynamic Glow from JS */
-    border-color: var(--stat-color, #3b82f6);
-    box-shadow: 0 8px 24px var(--stat-glow, rgba(59, 130, 246, 0.3));
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 /* Stat Warning States */
@@ -1726,3 +1726,88 @@
 }
 
 
+
+/* Achievements Locked Effect */
+.achievementItem.locked {
+    opacity: 0.7;
+    background: rgba(15, 23, 42, 0.4);
+    border-style: dashed;
+}
+
+.achievementItem.locked .achievementName {
+    color: #94a3b8;
+}
+
+.lockedLabel {
+    color: #ef4444;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+}
+
+/* Duolingo-style Streak Calendar */
+.weekCalendar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px; /* Tighter gap */
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+}
+
+.calendarDay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.dayName {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.dayBubble {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+/* Logged In State */
+.calendarDay.loggedIn .dayBubble {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: #fbbf24;
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+.dayMissed {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Today State */
+.calendarDay.today .dayName {
+    color: #f8fafc;
+    font-weight: 700;
+}
+
+.calendarDay.today .dayBubble {
+    border-color: #3b82f6;
+    transform: scale(1.1);
+}

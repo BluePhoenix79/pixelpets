@@ -36,7 +36,7 @@ export const PetStats: React.FC<PetStatsProps> = ({ pet }) => {
     { key: 'energy', icon: energyImg, label: 'Energy', value: pet.energy },
     { key: 'cleanliness', icon: cleanlinessImg, label: 'Cleanliness', value: pet.cleanliness },
     { key: 'health', icon: healthImg, label: 'Health', value: pet.health },
-    { key: 'love', icon: loveImg, label: 'Love', value: pet.love || 50 },
+    { key: 'love', icon: loveImg, label: 'Love', value: pet.love ?? 50 },
   ];
 
   return (

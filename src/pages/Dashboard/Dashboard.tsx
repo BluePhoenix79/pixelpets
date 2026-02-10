@@ -64,13 +64,9 @@ export default function Dashboard() {
       .maybeSingle();
 
     if (financeData) {
-      if (financeData.balance === 0) {
-          await supabase.from('user_finances').update({ balance: 50 }).eq('user_id', user.id);
-          setBalance(50);
-      } else {
-          setBalance(financeData.balance);
-      }
+      setBalance(financeData.balance);
     }
+
 
     const { data: petsData } = await supabase
       .from('pets')
@@ -153,39 +149,50 @@ export default function Dashboard() {
     // Deduct the pet adoption cost
     if (!user) return;
     
+    // Optimistic UI update
+    setBalance(prev => prev - PET_COST);
+
     const { error: financeError } = await supabase.from('user_finances').update({
       balance: balance - PET_COST
     }).eq('user_id', user.id);
 
     if (financeError) {
       alert('Error processing payment: ' + financeError.message);
+      setBalance(prev => prev + PET_COST); // Revert on error
       setIsCreating(false);
       return;
     }
 
-    const { error } = await supabase.from('pets').insert({
+    const newPetData = {
       name: petName,
       species: petSpecies,
       owner_id: user.id,
-      // Start all stats at 50% so no achievements are auto-completed
       hunger: 50,
       happiness: 50,
       energy: 50,
       cleanliness: 50,
       health: 50,
-      love: 50
-    });
+      love: 50,
+      xp: 0,
+      level: 1,
+      created_at: new Date().toISOString()
+    };
+
+    const { data: insertedPet, error } = await supabase.from('pets').insert(newPetData).select().single();
 
     if (error) {
       // Refund if pet creation failed
       await supabase.from('user_finances').update({
         balance: balance
       }).eq('user_id', user.id);
+      setBalance(prev => prev + PET_COST); // Revert
       alert('Error creating pet: ' + error.message);
     } else {
       setPetName('');
       setPetSpecies('');
       setShowNewPetForm(false);
+      // await loadUserData(); // No need to reload everything, just add to list if we want, or navigate?
+      // Actually usually we just stay on dashboard. Let's reload to be safe but we already updated balance.
       await loadUserData();
     }
 
@@ -198,7 +205,8 @@ export default function Dashboard() {
   };
 
   const handlePetClick = (petId: string) => {
-    navigate(`/pet/${petId}`);
+    const pet = pets.find(p => p.id === petId);
+    navigate(`/pet/${petId}`, { state: { pet } });
   };
 
   return (

@@ -29,7 +29,7 @@ export default function GameModal({ game, onComplete, onClose, reward, generated
   }, [reward]);
 
   const handleFailure = useCallback((message = "Not quite right. Try again next time!") => {
-    setResult({ text: `Incorrect. ${message}`, success: false });
+    setResult({ text: message, success: false });
     setWasSuccess(false);
     setIsFinished(true);
   }, []);

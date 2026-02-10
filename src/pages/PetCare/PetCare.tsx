@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef, ReactNode } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, PointElement, LineElement } from 'chart.js';
 
 import { useAuth } from '../../context/AuthContext';
@@ -89,9 +89,27 @@ export default function PetCare() {
   const { id: petId } = useParams<{ id: string }>();
   const { user, signOut, isGuest } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // State
-  const [pet, setPet] = useState<Pet | null>(null);
+  // Initialize from location state if available (Instant Load) OR Session Storage (Back button/Tab switch support)
+  const [pet, setPet] = useState<Pet | null>(() => {
+    if (location.state?.pet) return location.state.pet;
+    
+    // Try session storage
+    if (petId) {
+        const cached = sessionStorage.getItem(`pixelpets_cached_pet_${petId}`);
+        if (cached) {
+            try {
+                return JSON.parse(cached);
+            } catch (e) {
+                console.error("Failed to parse cached pet", e);
+            }
+        }
+    }
+    return null;
+  });
+
   const [balance, setBalance] = useState(0);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -136,6 +154,7 @@ export default function PetCare() {
 
 
   // Add Popup Helper - now checks session tracking to prevent duplicates
+  // Add Popup Helper - now checks session tracking to prevent duplicates
   const addPopup = (name: string, icon: ReactNode, achievementId?: string) => {
     // If achievementId provided, check if already shown this session
     if (achievementId && shownPopupsThisSession.current.has(achievementId)) {
@@ -145,11 +164,16 @@ export default function PetCare() {
       shownPopupsThisSession.current.add(achievementId);
     }
     
-    const id = popupIdCounter.current++;
-    setAchievementPopups(prev => [...prev, { id, name, icon }]);
+    // Check if duplicate popup text is already showing to prevent spam (e.g. multiple "Level Up" or "Streak")
+    setAchievementPopups(prev => {
+        if (prev.some(p => p.name === name)) return prev;
+        const id = popupIdCounter.current++;
+        return [...prev, { id, name, icon }];
+    });
+    
     setTimeout(() => {
-      setAchievementPopups(prev => prev.filter(p => p.id !== id));
-    }, 5000);
+      setAchievementPopups(prev => prev.filter(p => p.name !== name)); // Remove by name/id logic
+    }, 4000);
   };
 
   // Load data on mount
@@ -168,7 +192,7 @@ export default function PetCare() {
       decayIntervalRef.current = window.setInterval(async () => {
         setPet(prev => {
           if (!prev) return prev;
-          console.log('Decay tick - Love:', prev.love);
+          // Standard Decay: Slower pace (every 15s)
           const updated = {
             ...prev,
             hunger: Math.max(0, prev.hunger - 2),
@@ -196,7 +220,7 @@ export default function PetCare() {
           updatePetInDatabase(updated);
           return updated;
         });
-      }, 10000); // Every 10 seconds
+      }, 15000); // Every 15 seconds
     }
     return () => {
       if (decayIntervalRef.current) clearInterval(decayIntervalRef.current);
@@ -229,7 +253,14 @@ export default function PetCare() {
     }
 
     const { data, error } = await supabase.from('pets').select('*').eq('id', petId).eq('owner_id', user!.id).maybeSingle();
-    if (!data || error) { alert('Pet not found'); navigate('/dashboard'); return; }
+    if (!data || error) { navigate('/dashboard'); return; }
+    // Ensure love stat is initialized if missing
+    if (data.love === undefined || data.love === null) {
+        console.log("Love stat missing, initializing to 50");
+        const { error: updateError } = await supabase.from('pets').update({ love: 50 }).eq('id', petId);
+        if (updateError) console.error("Failed to init love stat:", updateError);
+        data.love = 50;
+    }
     setPet(data);
     await applyTimedDecay(data);
   };
@@ -239,20 +270,32 @@ export default function PetCare() {
     const now = new Date();
     const hoursPassed = (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60);
     if (hoursPassed >= 1) {
-      const decayAmount = Math.floor(hoursPassed);
+      // Much slower offline decay: ~1 point per 3-4 hours instead of 1 per hour (0.3 multiplier)
+      const decayAmount = Math.floor(hoursPassed * 0.3);
+      
+      // If decayAmount is 0 (e.g. only 1-2 hours passed), don't decay, or minimally decay? 
+      // Let's allow <=3 hours to be "safe" from decay.
+      
       const updated = {
         ...petData,
         hunger: Math.max(0, petData.hunger - decayAmount),
         happiness: Math.max(0, petData.happiness - Math.floor(decayAmount * 0.5)),
-        cleanliness: Math.max(0, petData.cleanliness - Math.floor(decayAmount * 0.8)),
-        energy: Math.max(0, petData.energy - Math.floor(decayAmount * 0.3)),
-        love: Math.max(0, (petData.love ?? 50) - Math.floor(decayAmount * 0.4)),
-        health: (petData.hunger < 20 || petData.cleanliness < 20) ? Math.max(0, petData.health - Math.floor(decayAmount * 0.2)) : petData.health
+        cleanliness: Math.max(0, petData.cleanliness - Math.floor(decayAmount * 1.5)),
+        energy: Math.max(0, petData.energy - Math.floor(decayAmount * 0.8)),
+        love: Math.max(0, (petData.love ?? 50) - Math.floor(decayAmount * 0.5)),
+        health: (petData.hunger < 20 || petData.cleanliness < 20) ? Math.max(0, petData.health - Math.floor(decayAmount * 0.5)) : petData.health
       };
       setPet(updated);
       await updatePetInDatabase(updated);
     }
   };
+
+  // Persist Pet to Session Storage to prevent flicker/CSS reset on reload/nav
+  useEffect(() => {
+      if (pet && pet.id) {
+          sessionStorage.setItem(`pixelpets_cached_pet_${pet.id}`, JSON.stringify(pet));
+      }
+  }, [pet]);
 
   const loadDailyStreak = async () => {
     if (isGuest) {
@@ -301,12 +344,10 @@ export default function PetCare() {
     }
     if (!user) return;
     
-    // Get date strings using local time
+    // Get date strings using local time to match calendar
     const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`;
+    // Use SV-SE (Sweden) locale which is consistently YYYY-MM-DD
+    const todayStr = today.toLocaleDateString('sv-SE');
 
     // Get current streak record from Supabase
     const { data: streakData, error } = await supabase
@@ -323,86 +364,66 @@ export default function PetCare() {
     let currentStreak = 0;
     let loginDates: string[] = [];
     
+    // Use upsert-like logic to handle race conditions (React StrictMode double-mount)
+    // First, check what we have
     if (!streakData) {
-      // First time user entry
+      // No record found. Try to insert (or do nothing if race condition creates one)
       currentStreak = 1;
       loginDates = [todayStr];
       
-      await supabase.from('user_streaks').insert({
+      const { error: insertError } = await supabase.from('user_streaks').insert({
         user_id: user.id,
         current_streak: 1,
         last_login_date: todayStr,
         login_dates: loginDates
-      });
-      
-      // Trigger First Streak Popup
-      addPopup('1 Day Streak!', <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+      }).select().maybeSingle();
+
+      if (!insertError) {
+          addPopup('1 Day Streak!', <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+      }
+      // If error (e.g. duplicate key), we'll catch it on next reload or it's fine.
     } else {
-      // Existing user record
+      // Existing record
       const lastLogin = streakData.last_login_date;
       loginDates = Array.isArray(streakData.login_dates) ? streakData.login_dates : [];
-      
-      console.log('=== STREAK DEBUG ===');
-      console.log('lastLogin from DB:', lastLogin);
-      console.log('todayStr:', todayStr);
-      console.log('Previous streak:', streakData.current_streak);
-      
-      // STREAK LOGIC:
-      // - If last login was TODAY: keep current streak (already counted today)
-      // - If last login was YESTERDAY: increment streak (continued streak)
-      // - If last login was BEFORE yesterday: reset streak to 1 (missed a day)
-      
+      currentStreak = streakData.current_streak;
+
       const yesterdayDate = new Date(today);
       yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-      const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+      const yesterdayStr = yesterdayDate.toLocaleDateString('sv-SE');
       
       if (lastLogin === todayStr) {
-        // Already logged in today - keep current streak (don't double count)
-        currentStreak = streakData.current_streak;
-        console.log('Already logged in today, keeping streak:', currentStreak);
+         // Already logged in today
       } else if (lastLogin === yesterdayStr) {
-        // Logged in yesterday - continue streak! Increment by 1
-        currentStreak = streakData.current_streak + 1;
-        
-        // Update login dates history
-        if (!loginDates.includes(todayStr)) {
-          loginDates.push(todayStr);
-          if (loginDates.length > 30) {
-            loginDates = loginDates.slice(loginDates.length - 30);
-          }
-        }
-        
-        // Update database
-        await supabase.from('user_streaks').update({
-          current_streak: currentStreak,
-          last_login_date: todayStr,
-          login_dates: loginDates,
-          updated_at: new Date().toISOString()
-        }).eq('user_id', user.id);
-        
-        // Trigger Streak Popup
-        addPopup(`${currentStreak} Day Streak!`, <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
-        console.log('Continued streak from yesterday:', currentStreak);
+         // Continue streak
+         currentStreak += 1;
+         if (!loginDates.includes(todayStr)) loginDates.push(todayStr);
+         if (loginDates.length > 30) loginDates = loginDates.slice(loginDates.length - 30);
+         
+         await supabase.from('user_streaks').update({
+             current_streak: currentStreak,
+             last_login_date: todayStr,
+             login_dates: loginDates,
+             updated_at: new Date().toISOString()
+         }).eq('user_id', user.id);
+         
+         addPopup(`${currentStreak} Day Streak!`, <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
       } else {
-        // Missed at least one day OR first login ever on a new day
-        // Start fresh at 1
-        currentStreak = 1;
-        loginDates = [todayStr];
-        
-        // Update database
-        await supabase.from('user_streaks').update({
-          current_streak: 1,
-          last_login_date: todayStr,
-          login_dates: loginDates,
-          updated_at: new Date().toISOString()
-        }).eq('user_id', user.id);
-        
-        console.log('New streak started! Previous login was:', lastLogin);
-        addPopup('Day 1 Streak Started!', <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
+         // Broken streak
+         currentStreak = 1;
+         loginDates = [todayStr]; // Reset history or keep it? Usually keep history but reset streak. Let's reset purely for "current streak" tracking.
+         
+         await supabase.from('user_streaks').update({
+             current_streak: 1,
+             last_login_date: todayStr,
+             login_dates: loginDates,
+             updated_at: new Date().toISOString()
+         }).eq('user_id', user.id);
+         
+         addPopup('Day 1 Streak Started!', <img src={fireImg} className={styles.pixelIcon} alt="fire" />);
       }
     }
-    
-    // Update local state
+
     setDailyStreak(currentStreak);
     setLoginDates(loginDates);
   };
@@ -412,25 +433,21 @@ export default function PetCare() {
     if (!pet || (!user && !isGuest) || !achievementsLoaded) return;
     
     // Require at least 1 completed task before stat-based achievements can unlock
-    // This prevents achievements from triggering on a brand new pet with default 100 stats
     const hasPlayedGame = totalTasksCompleted >= 1;
     
     const achievementDefinitions = [
-      // Stat-based achievements require some gameplay first
       { id: 'perfect_health', name: 'Perfect Health', icon: <img src={healthImg} className={styles.pixelIcon} alt="health" />, check: hasPlayedGame && pet.health === 100 },
       { id: 'happy_pet', name: 'Happiness Master', icon: <img src={happinessImg} className={styles.pixelIcon} alt="happy" />, check: hasPlayedGame && pet.happiness >= 90 },
       { id: 'well_fed', name: 'Gourmet Chef', icon: <img src={foodImg} className={styles.pixelIcon} alt="food" />, check: hasPlayedGame && pet.hunger >= 80 },
       { id: 'clean_pet', name: 'Squeaky Clean', icon: <img src={cleanlinessImg} className={styles.pixelIcon} alt="clean" />, check: hasPlayedGame && pet.cleanliness >= 85 },
       { id: 'energetic', name: 'Full of Energy', icon: <img src={energyImg} className={styles.pixelIcon} alt="energy" />, check: hasPlayedGame && pet.energy >= 75 },
       { id: 'loved_pet', name: 'Best Friends', icon: <img src={loveImg} className={styles.pixelIcon} alt="love" />, check: hasPlayedGame && (pet.love ?? 50) >= 80 },
-      // Task/streak achievements naturally require gameplay
       { id: 'streak_3', name: 'Streak Starter', icon: <img src={fireImg} className={styles.pixelIcon} alt="fire" />, check: answerStreak >= 3 },
       { id: 'streak_10', name: 'On Fire', icon: <img src={strongArmImg} className={styles.pixelIcon} alt="muscle" />, check: answerStreak >= 10 },
       { id: 'tasks_5', name: 'Task Beginner', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: totalTasksCompleted >= 5 },
       { id: 'tasks_25', name: 'Task Master', icon: <img src={trophyImg} className={styles.pixelIcon} alt="trophy" />, check: totalTasksCompleted >= 25 },
       { id: 'daily_7', name: 'Weekly Warrior', icon: <img src={calendarImg} className={styles.pixelIcon} alt="calendar" />, check: dailyStreak >= 7 },
       { id: 'saver', name: 'Money Saver', icon: <img src={moneyBagImg} className={styles.pixelIcon} alt="money" />, check: balance >= 500 },
-      // New Achievements
       { id: 'level_5', name: 'Rising Star', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: (pet.level || 1) >= 5 },
       { id: 'level_10', name: 'Pixel Master', icon: <img src={trophyImg} className={styles.pixelIcon} alt="trophy" />, check: (pet.level || 1) >= 10 },
       { id: 'quiz_whiz', name: 'Quiz Whiz', icon: <img src={strongArmImg} className={styles.pixelIcon} alt="brain" />, check: totalTasksCompleted >= 50 },
@@ -438,39 +455,64 @@ export default function PetCare() {
       { id: 'shopaholic', name: 'Shopaholic', icon: <img src={foodImg} className={styles.pixelIcon} alt="shopping" />, check: expenses.length >= 10 },
     ];
 
-    achievementDefinitions.forEach(async (achievement) => {
-      // Logic:
-      // If Global: Check if ANY record exists with this achievement ID.
-      // If Pet-Specific: Check if a record exists with this achievement ID AND matching petId.
-      
-      const isGlobal = GLOBAL_ACHIEVEMENTS.has(achievement.id);
-      const isAlreadyUnlocked = unlockedAchievements.some(a => {
-        if (isGlobal) return a.id === achievement.id; // Unlocked by any pet/session means unlocked for user
-        return a.id === achievement.id && a.petId === petId; // Must match current pet
-      });
-
-      if (achievement.check && !isAlreadyUnlocked) {
-        // Unlock achievement
-        if (isGuest) {
-             const newUnlocked = [...unlockedAchievements, { id: achievement.id, petId: petId as string }];
-             setUnlockedAchievements(newUnlocked);
-             localStorage.setItem('pixelpets_guest_achievements', JSON.stringify(newUnlocked));
-        } else if (user) {
-            await supabase.from('achievements').insert({
-            user_id: user.id,
-            pet_id: petId, // Always tag with current pet, even only for history
-            achievement_id: achievement.id,
-            completed_at: new Date().toISOString()
-            });
-            // Update local state locally to prevent immediate duplicate
-            setUnlockedAchievements(prev => [...prev, { id: achievement.id, petId: petId as string }]);
-        }
+    const checkForNewAchievements = async () => {
+        let newUnlocks: { id: string, petId: string }[] = [];
         
-        addPopup(achievement.name, achievement.icon, achievement.id);
-      }
-    });
-  }, [pet, answerStreak, totalTasksCompleted, dailyStreak, balance, unlockedAchievements, user, petId, achievementsLoaded, isGuest]);
+        // Calculate all newly unlocked achievements based on CURRENT state and CURRENT unlocked list
+        for (const achievement of achievementDefinitions) {
+             const isGlobal = GLOBAL_ACHIEVEMENTS.has(achievement.id);
+             
+             // Check against state directly
+             const isAlreadyUnlocked = unlockedAchievements.some(a => {
+                if (isGlobal) return a.id === achievement.id; 
+                return a.id === achievement.id && a.petId === petId; 
+             });
 
+             // Check against pending unlocks in this loop (to correctly handle multiple simultanous unlocks if needed, though rare)
+             const isPendingUnlock = newUnlocks.some(a => {
+                if (isGlobal) return a.id === achievement.id;
+                return a.id === achievement.id && a.petId === petId;
+             });
+
+             if (achievement.check && !isAlreadyUnlocked && !isPendingUnlock) {
+                 newUnlocks.push({ id: achievement.id, petId: petId as string });
+                 addPopup(achievement.name, achievement.icon, achievement.id);
+             }
+        }
+
+        if (newUnlocks.length > 0) {
+            // Update State
+            const updatedList = [...unlockedAchievements, ...newUnlocks];
+            setUnlockedAchievements(updatedList);
+            
+            if (isGuest) {
+                localStorage.setItem('pixelpets_guest_achievements', JSON.stringify(updatedList));
+            } else if (user) {
+                // Batch insert? Supabase doesn't support easy batch insert with different ignore logic per row easily, 
+                // but we can loop insert.
+                for (const unlock of newUnlocks) {
+                     await supabase.from('achievements').insert({
+                        user_id: user.id,
+                        pet_id: unlock.petId,
+                        achievement_id: unlock.id,
+                        completed_at: new Date().toISOString()
+                    });
+                }
+            }
+        }
+    };
+    
+    checkForNewAchievements();
+
+  }, [pet, answerStreak, totalTasksCompleted, dailyStreak, balance, isGuest, achievementsLoaded, unlockedAchievements]); 
+  // Wait, if I remove unlockedAchievements from dep array, I use STALE state inside!
+  // BUT if I include it, I re-run effect when I update it.
+  // The correct pattern is:
+  // 1. Calculate new achievements.
+  // 2. If new > 0, update state.
+  // 3. New state triggers re-run.
+  // 4. Re-run sees they are unlocked -> no new unlocks -> stable.
+  // This is safe. I will keep unlockedAchievements in the dependency array.
 
   const loadTotalTasksCompleted = async () => {
     if (isGuest) {
@@ -498,9 +540,8 @@ export default function PetCare() {
     const { data } = await supabase.from('user_finances').select('balance').eq('user_id', user!.id).maybeSingle();
     if (data) {
         if (data.balance === 0) {
-            await supabase.from('user_finances').update({ balance: 50 }).eq('user_id', user!.id);
-            setBalance(50);
-            addPopup('Emergency Funds!', <img src={moneyBagImg} className={styles.pixelIcon} alt="money" />);
+             // REMOVED Emergency Funds auto-reset on load. Only reset on death.
+             setBalance(0);
         } else {
             setBalance(data.balance);
         }
@@ -598,7 +639,7 @@ export default function PetCare() {
         }
         return;
     }
-    await supabase.from('pets').update({
+    const { error } = await supabase.from('pets').update({
       hunger: petData.hunger,
       happiness: petData.happiness,
       energy: petData.energy,
@@ -609,12 +650,18 @@ export default function PetCare() {
       level: petData.level,
       last_updated: new Date().toISOString()
     }).eq('id', petId);
+    
+    if (error) {
+        console.error("FAILED to update pet stats:", error.message, error.details, error.hint);
+        // Add visual feedback for debugging
+        addPopup("Save Error", <img src={warningImg} className={styles.pixelIcon} alt="error" />);
+    }
   };
 
   const performAction = async (action: ActionType) => {
     if (!pet || (!user && !isGuest)) return;
     const cost = COSTS[action];
-    if (cost > balance) { alert('Not enough money! Complete tasks to earn more.'); return; }
+    if (cost > balance) { addPopup("Need Money!", <img src={moneyBagImg} className={styles.pixelIcon} alt="money" />); return; }
 
     let updated = { ...pet };
     let expenseItem = { item: '', type: '' };
@@ -622,15 +669,16 @@ export default function PetCare() {
     switch (action) {
       case 'feed':
         // RUBRIC: Semantic Validation - Prevent feeding if already full
-        if (pet.hunger >= 100) { alert("Pet is not hungry! Don't waste food."); return; }
+        if (pet.hunger >= 100) { addPopup("Full!", <img src={warningImg} className={styles.pixelIcon} alt="full" />); return; }
 
         updated.hunger = Math.min(100, pet.hunger + 30);
+        updated.love = Math.min(100, (pet.love || 50) + 5); /* Feeding increases love */
         updated.happiness = Math.min(100, pet.happiness + 5);
         expenseItem = { item: 'Pet Food', type: 'food' };
         break;
       case 'play':
         // RUBRIC: Semantic Validation - Prevent playing if too tired
-        if (pet.energy <= 10) { alert("Pet is too tired to play! Let them rest first."); return; }
+        if (pet.energy <= 10) { addPopup("Too Tired!", <img src={sleepyImg} className={styles.pixelIcon} alt="sleep" />); return; }
 
         updated.happiness = Math.min(100, pet.happiness + 20);
         updated.energy = Math.max(0, pet.energy - 10);
@@ -936,7 +984,11 @@ export default function PetCare() {
   }, [balance]);
 
   if (!pet) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+    return (
+      <div className={styles.loadingOverlay}>
+        <FunLoader />
+      </div>
+    );
   }
 
   return (
@@ -997,6 +1049,7 @@ export default function PetCare() {
         </div>
 
         {/* Stats Grid - 6 stats for perfect 2x3 or 3x2 grid */}
+        {/* Stats Grid - Modularized */}
         {/* Stats Grid - Modularized */}
         <PetStats pet={pet} />
 
@@ -1131,24 +1184,36 @@ export default function PetCare() {
                   { id: 'tasks_5', name: 'Task Beginner', description: 'Complete 5 tasks', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: totalTasksCompleted >= 5 },
                   { id: 'tasks_25', name: 'Task Master', description: 'Complete 25 tasks', icon: <img src={trophyImg} className={styles.pixelIcon} alt="trophy" />, check: totalTasksCompleted >= 25 },
                   { id: 'daily_7', name: 'Weekly Warrior', description: 'Login 7 days in a row', icon: <img src={calendarImg} className={styles.pixelIcon} alt="calendar" />, check: dailyStreak >= 7 },
-                  { id: 'daily_7', name: 'Weekly Warrior', description: 'Login 7 days in a row', icon: <img src={calendarImg} className={styles.pixelIcon} alt="calendar" />, check: dailyStreak >= 7 },
+                  // REMOVED DUPLICATE daily_7
                   { id: 'saver', name: 'Money Saver', description: 'Have $500+ balance', icon: <img src={moneyBagImg} className={styles.pixelIcon} alt="money" />, check: balance >= 500 },
                   { id: 'level_5', name: 'Rising Star', description: 'Reach Level 5', icon: <img src={starImg} className={styles.pixelIcon} alt="star" />, check: (pet.level || 1) >= 5 },
                   { id: 'level_10', name: 'Pixel Master', description: 'Reach Level 10', icon: <img src={trophyImg} className={styles.pixelIcon} alt="trophy" />, check: (pet.level || 1) >= 10 },
                   { id: 'quiz_whiz', name: 'Quiz Whiz', description: 'Answer 50 questions correctly', icon: <img src={strongArmImg} className={styles.pixelIcon} alt="brain" />, check: totalTasksCompleted >= 50 },
                   { id: 'big_spender', name: 'Big Spender', description: 'Spend over $500 on your pet', icon: <img src={moneyBagImg} className={styles.pixelIcon} alt="spending" />, check: totalSpent >= 500 },
                   { id: 'shopaholic', name: 'Shopaholic', description: 'Buy 10 different items', icon: <img src={foodImg} className={styles.pixelIcon} alt="shopping" />, check: expenses.length >= 10 },
-                ].map(achievement => {
+                ].sort((a, b) => {
+                    // Sort: Unlocked first
+                    const aUnlocked = isAchievementUnlocked(a.id);
+                    const bUnlocked = isAchievementUnlocked(b.id);
+                    if (aUnlocked && !bUnlocked) return -1;
+                    if (!aUnlocked && bUnlocked) return 1;
+                    return 0;
+                }).map(achievement => {
                     const unlocked = isAchievementUnlocked(achievement.id);
                     return (
-                        <div key={achievement.id} className={`${styles.achievementItem} ${unlocked ? styles.completed : ''}`}>
-                          <div className={styles.achievementIcon}>{achievement.icon}</div>
+                        <div key={achievement.id} className={`${styles.achievementItem} ${unlocked ? styles.completed : styles.locked}`}>
+                          <div className={styles.achievementIcon} style={{ filter: unlocked ? 'none' : 'grayscale(100%) opacity(0.5)' }}>
+                            {achievement.icon}
+                          </div>
                           <div className={styles.achievementInfo}>
                             <div className={styles.achievementName}>{achievement.name}</div>
                             <div className={styles.achievementDescription}>{achievement.description}</div>
+                            {!unlocked && <div className={styles.lockedLabel}>Locked</div>}
                           </div>
                           {unlocked && (
-                            <div className={styles.achievementCompleted}>Complete!</div>
+                            <div className={styles.achievementCompleted}>
+                                <img src={checkmarkImg} alt="done" style={{ width: '20px', height: '20px' }} />
+                            </div>
                           )}
                         </div>
                     );
@@ -1168,24 +1233,31 @@ export default function PetCare() {
                     <div className={styles.weekCalendar}>
                       {Array.from({ length: 7 }).map((_, i) => {
                         const date = new Date();
-                        // Center today (index 3): i=0 -> -3 days, i=3 -> today, i=6 -> +3 days
-                        date.setDate(date.getDate() + (i - 3));
-                        const dateISO = date.toISOString().split('T')[0];
+                        // Show PAST 7 DAYS (History) instead of centered.
+                        // i=0 is 6 days ago. i=6 is Today.
+                        date.setDate(date.getDate() - (6 - i));
+                        
+                        // Use SV-SE locale for consistent YYYY-MM-DD
+                        const dateISO = date.toLocaleDateString('sv-SE');
+                        
                         const isLoggedIn = loginDates.includes(dateISO);
-                        const isToday = i === 3;
+                        const isToday = i === 6;
                         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-                        const dayNum = date.getDate();
-                        const isFuture = date > new Date();
+                        // const dayNum = date.getDate();
                         
                         return (
                           <div 
                             key={dateISO} 
                             className={`${styles.calendarDay} ${isLoggedIn ? styles.loggedIn : ''} ${isToday ? styles.today : ''}`}
-                            style={{ opacity: isFuture ? 0.5 : 1 }}
                           >
                             <span className={styles.dayName}>{dayName}</span>
-                            <span className={styles.dayNum}>{dayNum}</span>
-                            {isLoggedIn && <img src={checkmarkImg} className={styles.pixelIcon} alt="check" style={{ width: '20px', height: '20px' }} />}
+                            <div className={styles.dayBubble}>
+                                {isLoggedIn ? (
+                                    <img src={fireImg} className={styles.pixelIcon} alt="streak" style={{ width: '24px', height: '24px' }} />
+                                ) : (
+                                    <div className={styles.dayMissed} />
+                                )}
+                            </div>
                           </div>
                         );
                       })}

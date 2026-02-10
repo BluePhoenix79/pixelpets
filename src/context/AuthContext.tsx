@@ -30,13 +30,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-          setLoading(true);
-          checkProfile(session.user.id);
+      const newUser = session?.user ?? null;
+      
+      // Only set loading if the user has actually changed (login/logout/switch)
+      // This prevents "flicker/reload" when Supabase auto-refreshes token on window focus
+      if (newUser?.id !== user?.id) {
+          setUser(newUser);
+          if (newUser) {
+              setLoading(true);
+              checkProfile(newUser.id);
+          } else {
+              setHasProfile(false);
+              setLoading(false);
+          }
       } else {
-          setHasProfile(false);
-          setLoading(false);
+          // Same user, just session refresh. Update session but don't toggle loading.
+          // Maybe refresh profile silently?
+          setUser(newUser); 
       }
     });
 
