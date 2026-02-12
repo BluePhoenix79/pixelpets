@@ -26,10 +26,26 @@ import {
   LineElement,
 } from "chart.js";
 
-import { useAuth } from "../../context/AuthContext";
-import { getPetForUser, updatePet, updatePetInDatabase } from "../../lib/pets";
-import { getFinances } from "../../lib/finances";
+import { useAuth } from "../../hooks/useAuth";
 import { decreaseBalance, ensureFinance } from "../../lib/finances";
+import {
+  getPets,
+  updatePet,
+  getTasks,
+  createTask,
+  deleteIncompleteTasks,
+  completeTask,
+  getFinances,
+  patchFinances,
+  getExpenses,
+  createExpense,
+  getAchievements,
+  createAchievement,
+  getUserStreak,
+  upsertUserStreak,
+  getSavingsGoal,
+  createSavingsGoal,
+} from "../../lib/api";
 import { getRandomGame, type MiniGame } from "../../data/miniGames";
 import GameModal from "../../components/GameModal/GameModal";
 import type { Pet, PetSpecies, Expense, Task, ActionType } from "../../types";
@@ -306,7 +322,8 @@ export default function PetCare() {
       return;
     }
 
-    const data = await getPetForUser(petId, user!.id);
+    const petsData = await getPets(user!.id);
+    const data = petsData.find((p: Pet) => p.id === petId);
     if (!data) {
       navigate("/dashboard");
       return;
@@ -314,7 +331,7 @@ export default function PetCare() {
     // Ensure love stat is initialized if missing
     if (data.love === undefined || data.love === null) {
       console.log("Love stat missing, initializing to 50");
-      const updated = await updatePet(petId, { love: 50 });
+      const updated = await updatePet(petId!, { love: 50 });
       data.love = updated.love;
     }
     setPet(data);
@@ -380,7 +397,7 @@ export default function PetCare() {
           const yesterdayStr = yesterdayDate.toISOString().split("T")[0];
 
           let newStreak = currentStreak;
-          let newLoginDates = [...loginDates];
+          const newLoginDates = [...loginDates];
 
           if (lastLoginDate === yesterdayStr) {
             newStreak++;
@@ -437,105 +454,92 @@ export default function PetCare() {
     // Use SV-SE (Sweden) locale which is consistently YYYY-MM-DD
     const todayStr = today.toLocaleDateString("sv-SE");
 
-    // Get current streak record from Supabase
-    const { data: streakData, error } = await supabase
-      .from("user_streaks")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // Get current streak record from API
+    try {
+      const streakData = await getUserStreak(user.id);
 
-    if (error && error.code !== "PGRST116") {
-      console.error("Error fetching streak:", error);
-      return;
-    }
+      let currentStreak = 0;
+      let loginDates: string[] = [];
 
-    let currentStreak = 0;
-    let loginDates: string[] = [];
+      // Use upsert-like logic to handle race conditions
+      if (!streakData) {
+        // No record found. Try to insert
+        currentStreak = 1;
+        loginDates = [todayStr];
 
-    // Use upsert-like logic to handle race conditions (React StrictMode double-mount)
-    // First, check what we have
-    if (!streakData) {
-      // No record found. Try to insert (or do nothing if race condition creates one)
-      currentStreak = 1;
-      loginDates = [todayStr];
+        try {
+          await upsertUserStreak({
+            user_id: user.id,
+            current_streak: 1,
+            last_login_date: todayStr,
+            login_dates: loginDates,
+          });
 
-      const { error: insertError } = await supabase
-        .from("user_streaks")
-        .insert({
-          user_id: user.id,
-          current_streak: 1,
-          last_login_date: todayStr,
-          login_dates: loginDates,
-        })
-        .select()
-        .maybeSingle();
+          addPopup(
+            "1 Day Streak!",
+            <img src={fireImg} className={styles.pixelIcon} alt="fire" />,
+          );
+        } catch (error) {
+          console.error("Error upserting streak:", error);
+        }
+      } else {
+        // Existing record
+        const lastLogin = streakData.last_login_date;
+        loginDates = Array.isArray(streakData.login_dates)
+          ? streakData.login_dates
+          : [];
+        currentStreak = streakData.current_streak;
 
-      if (!insertError) {
-        addPopup(
-          "1 Day Streak!",
-          <img src={fireImg} className={styles.pixelIcon} alt="fire" />,
-        );
-      }
-      // If error (e.g. duplicate key), we'll catch it on next reload or it's fine.
-    } else {
-      // Existing record
-      const lastLogin = streakData.last_login_date;
-      loginDates = Array.isArray(streakData.login_dates)
-        ? streakData.login_dates
-        : [];
-      currentStreak = streakData.current_streak;
+        const yesterdayDate = new Date(today);
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayStr = yesterdayDate.toLocaleDateString("sv-SE");
 
-      const yesterdayDate = new Date(today);
-      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-      const yesterdayStr = yesterdayDate.toLocaleDateString("sv-SE");
+        if (lastLogin === todayStr) {
+          // Already logged in today
+        } else if (lastLogin === yesterdayStr) {
+          // Continue streak
+          currentStreak += 1;
+          if (!loginDates.includes(todayStr)) loginDates.push(todayStr);
+          if (loginDates.length > 30)
+            loginDates = loginDates.slice(loginDates.length - 30);
 
-      if (lastLogin === todayStr) {
-        // Already logged in today
-      } else if (lastLogin === yesterdayStr) {
-        // Continue streak
-        currentStreak += 1;
-        if (!loginDates.includes(todayStr)) loginDates.push(todayStr);
-        if (loginDates.length > 30)
-          loginDates = loginDates.slice(loginDates.length - 30);
-
-        await supabase
-          .from("user_streaks")
-          .update({
+          await upsertUserStreak({
+            user_id: user.id,
             current_streak: currentStreak,
             last_login_date: todayStr,
             login_dates: loginDates,
             updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", user.id);
+          });
 
-        addPopup(
-          `${currentStreak} Day Streak!`,
-          <img src={fireImg} className={styles.pixelIcon} alt="fire" />,
-        );
-      } else {
-        // Broken streak
-        currentStreak = 1;
-        loginDates = [todayStr]; // Reset history or keep it? Usually keep history but reset streak. Let's reset purely for "current streak" tracking.
+          addPopup(
+            `${currentStreak} Day Streak!`,
+            <img src={fireImg} className={styles.pixelIcon} alt="fire" />,
+          );
+        } else {
+          // Broken streak
+          currentStreak = 1;
+          loginDates = [todayStr];
 
-        await supabase
-          .from("user_streaks")
-          .update({
+          await upsertUserStreak({
+            user_id: user.id,
             current_streak: 1,
             last_login_date: todayStr,
             login_dates: loginDates,
             updated_at: new Date().toISOString(),
-          })
-          .eq("user_id", user.id);
+          });
 
-        addPopup(
-          "Day 1 Streak Started!",
-          <img src={fireImg} className={styles.pixelIcon} alt="fire" />,
-        );
+          addPopup(
+            "Day 1 Streak Started!",
+            <img src={fireImg} className={styles.pixelIcon} alt="fire" />,
+          );
+        }
       }
-    }
 
-    setDailyStreak(currentStreak);
-    setLoginDates(loginDates);
+      setDailyStreak(currentStreak);
+      setLoginDates(loginDates);
+    } catch (error) {
+      console.error("Error in loadDailyStreak:", error);
+    }
   };
 
   // Achievement Check Effect
@@ -665,7 +669,7 @@ export default function PetCare() {
     ];
 
     const checkForNewAchievements = async () => {
-      let newUnlocks: { id: string; petId: string }[] = [];
+      const newUnlocks: { id: string; petId: string }[] = [];
 
       // Calculate all newly unlocked achievements based on CURRENT state and CURRENT unlocked list
       for (const achievement of achievementDefinitions) {
@@ -700,15 +704,18 @@ export default function PetCare() {
             JSON.stringify(updatedList),
           );
         } else if (user) {
-          // Batch insert? Supabase doesn't support easy batch insert with different ignore logic per row easily,
-          // but we can loop insert.
+          // Loop insert via API
           for (const unlock of newUnlocks) {
-            await supabase.from("achievements").insert({
-              user_id: user.id,
-              pet_id: unlock.petId,
-              achievement_id: unlock.id,
-              completed_at: new Date().toISOString(),
-            });
+            try {
+              await createAchievement({
+                user_id: user.id,
+                pet_id: unlock.petId,
+                achievement_id: unlock.id,
+                completed_at: new Date().toISOString(),
+              });
+            } catch (error) {
+              console.error("Error creating achievement:", error);
+            }
           }
         }
       }
@@ -741,12 +748,15 @@ export default function PetCare() {
       return;
     }
     if (!user) return;
-    const { count } = await supabase
-      .from("tasks")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("completed", true);
-    setTotalTasksCompleted(count || 0);
+    try {
+      const tasks = await getTasks(user.id);
+      const completedCount = (tasks as Task[]).filter(
+        (t: Task) => t.completed === true,
+      ).length;
+      setTotalTasksCompleted(completedCount);
+    } catch (error) {
+      console.error("Error loading total tasks completed:", error);
+    }
   };
 
   const loadBalance = async () => {
@@ -764,18 +774,17 @@ export default function PetCare() {
       setBalance(currentBal);
       return;
     }
-    const { data } = await supabase
-      .from("user_finances")
-      .select("balance")
-      .eq("user_id", user!.id)
-      .maybeSingle();
-    if (data) {
-      if (data.balance === 0) {
-        // REMOVED Emergency Funds auto-reset on load. Only reset on death.
-        setBalance(0);
-      } else {
-        setBalance(data.balance);
+    try {
+      const finances = await getFinances(user!.id);
+      if (finances) {
+        if (finances.balance === 0) {
+          setBalance(0);
+        } else {
+          setBalance(finances.balance);
+        }
       }
+    } catch (error) {
+      console.error("Error loading balance:", error);
     }
   };
 
@@ -785,13 +794,12 @@ export default function PetCare() {
       if (e) setExpenses(JSON.parse(e));
       return;
     }
-    const { data } = await supabase
-      .from("expenses")
-      .select("*")
-      .eq("user_id", user!.id)
-      .eq("pet_id", petId)
-      .order("created_at", { ascending: false });
-    if (data) setExpenses(data);
+    try {
+      const expensesData = await getExpenses(user!.id, petId!);
+      setExpenses(expensesData || []);
+    } catch (error) {
+      console.error("Error loading expenses:", error);
+    }
   };
 
   const loadTasks = async () => {
@@ -818,16 +826,15 @@ export default function PetCare() {
         },
       ];
       // TODO: Persist tasks? For now just static random
-      setTasks(taskTemplates as any);
+      setTasks(taskTemplates as Task[]);
       return;
     }
-    const { data } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("user_id", user!.id)
-      .eq("completed", false)
-      .order("created_at", { ascending: false });
-    if (data) setTasks(data);
+    try {
+      const tasksData = await getTasks(user!.id);
+      setTasks(tasksData as Task[]);
+    } catch (error) {
+      console.error("Error loading tasks:", error);
+    }
   };
 
   const loadTotalSpent = async () => {
@@ -837,32 +844,35 @@ export default function PetCare() {
       if (e) {
         const parsed = JSON.parse(e);
         setTotalSpent(
-          parsed.reduce((sum: number, item: any) => sum + item.amount, 0),
+          parsed.reduce((sum: number, item: Expense) => sum + item.amount, 0),
         );
       }
       return;
     }
-    const { data } = await supabase
-      .from("expenses")
-      .select("amount")
-      .eq("pet_id", petId);
-    if (data) {
-      const total = data.reduce((sum, item) => sum + item.amount, 0);
-      setTotalSpent(total);
+    try {
+      const expensesData = await getExpenses(user!.id, petId);
+      if (expensesData) {
+        const total = expensesData.reduce(
+          (sum: number, item: Expense) => sum + item.amount,
+          0,
+        );
+        setTotalSpent(total);
+      }
+    } catch (error) {
+      console.error("Error loading total spent:", error);
     }
   };
 
   const loadSavingsGoal = async () => {
     if (isGuest) return; // No savings goal for guest
-    const { data } = await supabase
-      .from("savings_goals")
-      .select("*")
-      .eq("user_id", user!.id)
-      .eq("pet_id", petId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data) setSavingsGoal(data.target_amount);
+    try {
+      const savingsData = await getSavingsGoal(user!.id, petId!);
+      if (savingsData) {
+        setSavingsGoal(savingsData.target_amount);
+      }
+    } catch (error) {
+      console.error("Error loading savings goal:", error);
+    }
   };
 
   const loadAchievements = async () => {
@@ -875,17 +885,20 @@ export default function PetCare() {
       return;
     }
     // Load ALL achievements for this user to support global achievements (Tasks, Streak, Balance)
-    const { data } = await supabase
-      .from("achievements")
-      .select("achievement_id, pet_id")
-      .eq("user_id", user!.id);
-    if (data) {
-      setUnlockedAchievements(
-        data.map((a) => ({
-          id: a.achievement_id,
-          petId: (a.pet_id || "") as string,
-        })),
-      );
+    try {
+      const achievementsList = await getAchievements(user!.id);
+      if (achievementsList) {
+        setUnlockedAchievements(
+          achievementsList.map(
+            (a: { achievement_id: string; pet_id: string }) => ({
+              id: a.achievement_id,
+              petId: (a.pet_id || "") as string,
+            }),
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Error loading achievements:", error);
     }
     setAchievementsLoaded(true);
   };
@@ -921,9 +934,8 @@ export default function PetCare() {
       }
       return;
     }
-    const { error } = await supabase
-      .from("pets")
-      .update({
+    try {
+      await updatePet(petId!, {
         hunger: petData.hunger,
         happiness: petData.happiness,
         energy: petData.energy,
@@ -933,16 +945,9 @@ export default function PetCare() {
         xp: petData.xp,
         level: petData.level,
         last_updated: new Date().toISOString(),
-      })
-      .eq("id", petId);
-
-    if (error) {
-      console.error(
-        "FAILED to update pet stats:",
-        error.message,
-        error.details,
-        error.hint,
-      );
+      });
+    } catch (error) {
+      console.error("FAILED to update pet stats:", error);
       // Add visual feedback for debugging
       addPopup(
         "Save Error",
@@ -962,7 +967,7 @@ export default function PetCare() {
       return;
     }
 
-    let updated = { ...pet };
+    const updated = { ...pet };
     let expenseItem = { item: "", type: "" };
 
     switch (action) {
@@ -1071,17 +1076,21 @@ export default function PetCare() {
         setExpenses([newExpense as Expense, ...expenses]);
         setTotalSpent(totalSpent + cost);
       } else {
-        await decreaseBalance(user!.id, cost);
-        await supabase.from("expenses").insert({
-          pet_id: petId,
-          user_id: user!.id,
-          expense_type: expenseItem.type,
-          item_name: expenseItem.item,
-          amount: cost,
-        });
-        await loadBalance();
-        await loadExpenses();
-        await loadTotalSpent();
+        try {
+          await decreaseBalance(user!.id, cost);
+          await createExpense({
+            pet_id: petId,
+            user_id: user!.id,
+            expense_type: expenseItem.type,
+            item_name: expenseItem.item,
+            amount: cost,
+          });
+          await loadBalance();
+          await loadExpenses();
+          await loadTotalSpent();
+        } catch (error) {
+          console.error("Error creating expense:", error);
+        }
       }
     }
   };
@@ -1112,7 +1121,7 @@ export default function PetCare() {
           completed: false,
         },
       ];
-      setTasks(taskTemplates as any);
+      setTasks(taskTemplates as Task[]);
       return;
     }
 
@@ -1132,20 +1141,22 @@ export default function PetCare() {
       .sort(() => Math.random() - 0.5)
       .slice(0, 3);
 
-    await supabase
-      .from("tasks")
-      .delete()
-      .eq("user_id", user!.id)
-      .eq("completed", false);
-    await supabase.from("tasks").insert(
-      selectedTasks.map((t) => ({
-        user_id: user!.id,
-        task_name: t.name,
-        reward_amount: t.reward,
-        completed: false,
-      })),
-    );
-    await loadTasks();
+    try {
+      // Delete incomplete tasks
+      await deleteIncompleteTasks(user!.id);
+
+      // Create new tasks
+      for (const t of selectedTasks) {
+        await createTask({
+          user_id: user!.id,
+          task_name: t.name,
+          reward_amount: t.reward,
+        });
+      }
+      await loadTasks();
+    } catch (error) {
+      console.error("Error generating tasks:", error);
+    }
   };
 
   const triggerTaskGame = async (task: Task) => {
@@ -1206,7 +1217,10 @@ export default function PetCare() {
 
       // Increase pet love when completing tasks
       if (pet) {
-        let updatedPet = { ...pet, love: Math.min(100, (pet.love ?? 50) + 5) };
+        const updatedPet = {
+          ...pet,
+          love: Math.min(100, (pet.love ?? 50) + 5),
+        };
 
         // XP Logic REMOVED - Tasks only give money now.
         // const xpGain = 100;
@@ -1229,25 +1243,19 @@ export default function PetCare() {
           (totalTasksCompleted + 1).toString(),
         );
       } else if (user) {
-        const { data: currentFinance } = await supabase
-          .from("user_finances")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
-        if (currentFinance) {
-          await supabase
-            .from("user_finances")
-            .update({
+        try {
+          const currentFinance = await getFinances(user.id);
+          if (currentFinance) {
+            await patchFinances(user.id, {
               balance: currentFinance.balance + totalReward,
               total_earned: currentFinance.total_earned + totalReward,
-            })
-            .eq("user_id", user.id);
-          await loadBalance();
+            });
+            await loadBalance();
+          }
+          await completeTask(currentTaskInfo.id);
+        } catch (error) {
+          console.error("Error completing task:", error);
         }
-        await supabase
-          .from("tasks")
-          .update({ completed: true, completed_at: new Date().toISOString() })
-          .eq("id", currentTaskInfo.id);
       }
     } else {
       // Reset streak on incorrect answer
@@ -1262,10 +1270,16 @@ export default function PetCare() {
 
   const handleSetSavingsGoal = async (amount: number) => {
     if (!user || !petId || amount <= 0) return;
-    await supabase
-      .from("savings_goals")
-      .insert({ user_id: user.id, pet_id: petId, target_amount: amount });
-    setSavingsGoal(amount);
+    try {
+      await createSavingsGoal({
+        user_id: user.id,
+        pet_id: petId,
+        target_amount: amount,
+      });
+      setSavingsGoal(amount);
+    } catch (error) {
+      console.error("Error setting savings goal:", error);
+    }
   };
 
   const handleLogout = async () => {
@@ -2287,19 +2301,22 @@ export default function PetCare() {
                       localStorage.getItem("pixelpets_guest_pets") || "[]",
                     );
                     const updatedPets = savedPets.filter(
-                      (p: any) => p.id !== pet.id,
+                      (p: Pet) => p.id !== pet.id,
                     );
                     localStorage.setItem(
                       "pixelpets_guest_pets",
                       JSON.stringify(updatedPets),
                     );
                   } else {
-                    const { error } = await supabase
-                      .from("pets")
-                      .delete()
-                      .eq("id", pet.id);
-                    if (error) {
-                      alert("Error removing pet: " + error.message);
+                    try {
+                      await updatePet(pet.id, { deleted: true });
+                    } catch (error) {
+                      alert(
+                        "Error removing pet: " +
+                          (error instanceof Error
+                            ? error.message
+                            : "Unknown error"),
+                      );
                       return;
                     }
                   }
