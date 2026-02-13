@@ -1,4 +1,3 @@
-import { supabase } from './supabase';
 import type { TriviaGame, MiniGame } from '../data/miniGames';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -96,8 +95,9 @@ export async function generateAIQuestion(type: AIRequestType = 'trivia'): Promis
     return await generateDirectWithRotation(category, type);
   }
   
-  // Fallback to Supabase Edge Function
-  return await generateViaSupabase(category, type);
+  // No API key configured - cannot generate questions
+  console.warn('VITE_GEMINI_API_KEY not configured. Set it in .env to enable AI questions.');
+  return null;
 }
 
 /**
@@ -146,9 +146,9 @@ async function generateDirectWithRotation(category: string, type: AIRequestType)
     console.log(`${model} failed with status ${result.status}, trying next...`);
   }
   
-  // All models failed, try Supabase fallback
-  console.log('All models exhausted, trying Supabase fallback...');
-  return await generateViaSupabase(category, type);
+  // All models failed - cannot generate
+  console.error('All Gemini models exhausted. Cannot generate AI questions.');
+  return null;
 }
 
 // Difficulty Preference
@@ -230,26 +230,5 @@ async function tryGenerateWithModel(
   } catch (err) {
     console.error(`Error with model ${model}:`, err);
     return { success: false, status: 500 };
-  }
-}
-
-/**
- * Supabase Edge Function call (secure, API key hidden)
- */
-async function generateViaSupabase(category: string, type: AIRequestType): Promise<MiniGame | null> {
-  try {
-    const { data, error } = await supabase.functions.invoke('generate-quiz', {
-      body: { category, type }
-    });
-
-    if (error) {
-      console.error('Supabase function error:', error);
-      return null;
-    }
-
-    return { ...data, generatedBy: 'Supabase Edge Function' } as MiniGame;
-  } catch (err) {
-    console.error('Failed to generate AI question:', err);
-    return null;
   }
 }

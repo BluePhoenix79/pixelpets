@@ -1,21 +1,20 @@
-const express = require('express');
-const sql = require('mssql');
-const cors = require('cors');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+import express from 'express';
+import sql from 'mssql';
+import cors from 'cors';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+dotenv.config();
 
-// Database configuration
+let pool;
+
 const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     server: process.env.DB_SERVER,
     database: process.env.DB_DATABASE,
-    port: Number(process.env.DB_PORT),
+    port: Number(process.env.DB_PORT) || 1433,
     options: {
         encrypt: true,
         trustServerCertificate: false
@@ -27,42 +26,256 @@ const config = {
     }
 };
 
-// Connect to database
-let pool;
-sql.connect(config).then(p => {
-    pool = p;
-    console.log('Connected to Azure SQL Database');
-}).catch(err => {
-    console.error('Database connection failed:', err);
-});
-
 function getPool() {
-    if (!pool) {
-        throw new Error('Database connection not established');
-    }
+    if (!pool) throw new Error('Database connection not established');
     return pool;
 }
 
+sql.connect(config).then(p => {
+    pool = p;
+    console.log('✅ Connected to Azure SQL Database');
+}).catch(err => {
+    console.error('❌ Database connection failed!');
+    console.error('Error Message:', err.message); 
+    console.error('Error Code:', err.code);
+});
+
+const app = express();
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.header('Access-Control-Allow-Credentials', 'true');
+
+    // Intercept OPTIONS method
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
+app.use(express.json());
+
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`, req.body);
+    next();
+});
+
+const JWT_SECRET = process.env.JWT_SECRET || 'ilikecodingandfbla';
+
+// ==================== AUTH MIDDLEWARE ====================
+
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-    if (!token) {
-        return res.status(401).json({ error: 'No token provided' });
-    }
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No token provided' });
 
     jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Invalid or expired token' });
-        }
+        if (err) return res.status(403).json({ error: 'Invalid or expired token' });
         req.user = user;
         next();
     });
 }
 
+// ==================== AUTH ENDPOINTS ====================
+
+// Sign Up
+app.post('/api/auth/signup', async (req, res) => {
+    try {
+        const { email, password, username } = req.body;
+
+        if (!email || !password || !username) {
+            return res.status(400).json({ error: 'Email, password, and username are required' });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+
+        // Check if email already exists
+        const existingEmail = await getPool().request()
+            .input('email', sql.NVarChar, email.toLowerCase())
+            .query('SELECT id FROM auth.users WHERE email = @email');
+        if (existingEmail.recordset.length > 0) {
+            return res.status(400).json({ error: 'An account with this email already exists' });
+        }
+
+        // Check if username already exists
+        const existingUsername = await getPool().request()
+            .input('username', sql.NVarChar, username)
+            .query('SELECT id FROM auth.users WHERE username = @username');
+        if (existingUsername.recordset.length > 0) {
+            return res.status(400).json({ error: 'Username is already taken' });
+        }
+
+        // Hash password and create user
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const userResult = await getPool().request()
+            .input('email', sql.NVarChar, email.toLowerCase())
+            .input('password', sql.NVarChar, hashedPassword)
+            .input('username', sql.NVarChar, username)
+            .query(`
+                INSERT INTO [auth].[users] (email, encrypted_password, username, show_on_leaderboard)
+                OUTPUT INSERTED.id, INSERTED.email, INSERTED.username
+                VALUES (@email, @password, @username, 1)
+            `);
+
+        const newUser = userResult.recordset[0];
+
+        // Create starting finances
+        await getPool().request()
+            .input('user_id', sql.UniqueIdentifier, newUser.id)
+            .query(`
+                INSERT INTO user_finances (user_id, balance, total_earned, total_spent)
+                VALUES (@user_id, 50, 50, 0)
+            `);
+
+        // Generate JWT
+        const token = jwt.sign(
+            { id: newUser.id, email: newUser.email },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({ user: newUser, token });
+    } catch (err) {
+        console.error('--- SIGNUP ERROR DEBUGGING ---');
+        console.error('Message:', err.message);
+        console.error('Stack:', err.stack);
+        
+        res.status(500).json({ error: err.message || 'Failed to create account' });
+    }
+});
+
+// Sign In
+app.post('/api/auth/signin', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
+        const userResult = await getPool().request()
+            .input('email', sql.NVarChar, email.toLowerCase())
+            .query('SELECT id, email, encrypted_password, username FROM [auth].[users] WHERE email = @email');
+
+        if (userResult.recordset.length === 0) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        const user = userResult.recordset[0];
+        const passwordMatch = await bcrypt.compare(password, user.encrypted_password);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+
+        const token = jwt.sign(
+            { id: user.id, email: user.email },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            user: { id: user.id, email: user.email, username: user.username },
+            token
+        });
+    } catch (err) {
+        console.error('Signin error:', err);
+        res.status(500).json({ error: 'Failed to sign in' });
+    }
+});
+
+// Get current user (verify token)
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
+    try {
+        const result = await getPool().request()
+            .input('id', sql.UniqueIdentifier, req.user.id)
+            .query('SELECT id, email, username, show_on_leaderboard FROM auth.users WHERE id = @id');
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const user = result.recordset[0];
+        res.json({
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            show_on_leaderboard: user.show_on_leaderboard,
+            hasProfile: !!user.username
+        });
+    } catch (err) {
+        console.error('Get user error:', err);
+        res.status(500).json({ error: 'Failed to get user' });
+    }
+});
+
+// Update username
+app.patch('/api/auth/username', authenticateToken, async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username) return res.status(400).json({ error: 'Username is required' });
+
+        const existing = await getPool().request()
+            .input('username', sql.NVarChar, username)
+            .query('SELECT id FROM auth.users WHERE username = @username');
+        if (existing.recordset.length > 0) {
+            return res.status(400).json({ error: 'Username is already taken' });
+        }
+
+        await getPool().request()
+            .input('id', sql.UniqueIdentifier, req.user.id)
+            .input('username', sql.NVarChar, username)
+            .query('UPDATE auth.users SET username = @username, updated_at = SYSDATETIMEOFFSET() WHERE id = @id');
+
+        res.json({ message: 'Username updated successfully' });
+    } catch (err) {
+        console.error('Update username error:', err);
+        res.status(500).json({ error: 'Failed to update username' });
+    }
+});
+
+// Update password
+app.patch('/api/auth/password', authenticateToken, async (req, res) => {
+    try {
+        const { newPassword } = req.body;
+        if (!newPassword || newPassword.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await getPool().request()
+            .input('id', sql.UniqueIdentifier, req.user.id)
+            .input('password', sql.NVarChar, hashedPassword)
+            .query('UPDATE auth.users SET encrypted_password = @password, updated_at = SYSDATETIMEOFFSET() WHERE id = @id');
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (err) {
+        console.error('Update password error:', err);
+        res.status(500).json({ error: 'Failed to update password' });
+    }
+});
+
+// Update leaderboard visibility
+app.patch('/api/auth/visibility', authenticateToken, async (req, res) => {
+    try {
+        const { show_on_leaderboard } = req.body;
+        await getPool().request()
+            .input('id', sql.UniqueIdentifier, req.user.id)
+            .input('show', sql.Bit, show_on_leaderboard)
+            .query('UPDATE auth.users SET show_on_leaderboard = @show WHERE id = @id');
+
+        res.json({ message: 'Visibility updated' });
+    } catch (err) {
+        console.error('Update visibility error:', err);
+        res.status(500).json({ error: 'Failed to update visibility' });
+    }
+});
+
 // ==================== PETS ENDPOINTS ====================
 
-// Get all pets for a user (by owner_id)
+// Get all pets for a user
 app.get('/api/pets/:userId', async (req, res) => {
     try {
         const result = await getPool().request()
@@ -75,22 +288,17 @@ app.get('/api/pets/:userId', async (req, res) => {
     }
 });
 
-// Get a single pet by ID (with owner verification)
-app.get("/api/pet/:petId/:userId", async (req, res) => {
+// Get a single pet that belongs to a user
+app.get('/api/pet/:petId/:userId', async (req, res) => {
     try {
         const result = await getPool().request()
-            .input("petId", sql.UniqueIdentifier, req.params.petId)
-            .input("userId", sql.UniqueIdentifier, req.params.userId)
-            .query(`
-                SELECT *
-                FROM pets
-                WHERE id = @petId AND owner_id = @userId
-            `);
-
+            .input('petId', sql.UniqueIdentifier, req.params.petId)
+            .input('userId', sql.UniqueIdentifier, req.params.userId)
+            .query('SELECT * FROM pets WHERE id = @petId AND owner_id = @userId');
         res.json(result.recordset[0] || null);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: "Failed to fetch pet" });
+        res.status(500).json({ error: 'Failed to fetch pet' });
     }
 });
 
@@ -114,11 +322,10 @@ app.post('/api/pets', async (req, res) => {
     }
 });
 
-// Update pet stats (UPDATED - includes love, xp, level)
+// Update pet stats
 app.patch('/api/pets/:id', async (req, res) => {
     try {
         const { hunger, happiness, energy, cleanliness, health, love, xp, level } = req.body;
-        
         const result = await getPool().request()
             .input('id', sql.UniqueIdentifier, req.params.id)
             .input('hunger', sql.Int, hunger)
@@ -150,46 +357,56 @@ app.patch('/api/pets/:id', async (req, res) => {
     }
 });
 
-// Delete pet
-app.delete('/api/pets/:id', async (req, res) => {
+// Rename pet
+app.patch('/api/pets/:id/rename', async (req, res) => {
     try {
+        const { name } = req.body;
         await getPool().request()
             .input('id', sql.UniqueIdentifier, req.params.id)
-            .query('DELETE FROM pets WHERE id = @id');
-        res.json({ success: true });
+            .input('name', sql.NVarChar, name)
+            .query('UPDATE pets SET name = @name WHERE id = @id');
+        res.json({ message: 'Pet renamed successfully' });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Failed to delete pet' });
+        res.status(500).json({ error: 'Failed to rename pet' });
     }
 });
 
-// Update pet visibility on leaderboard (NEW)
+// Update pet leaderboard visibility
 app.patch('/api/pets/:id/visibility', async (req, res) => {
     try {
         const { show_on_leaderboard } = req.body;
         await getPool().request()
             .input('id', sql.UniqueIdentifier, req.params.id)
-            .input('show_on_leaderboard', sql.Bit, show_on_leaderboard)
-            .query('UPDATE pets SET show_on_leaderboard = @show_on_leaderboard WHERE id = @id');
-        res.json({ success: true });
+            .input('show', sql.Bit, show_on_leaderboard)
+            .query('UPDATE pets SET show_on_leaderboard = @show WHERE id = @id');
+        res.json({ message: 'Pet visibility updated' });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to update pet visibility' });
     }
 });
 
-// Rename pet (NEW)
-app.patch('/api/pets/:id/rename', async (req, res) => {
+// Delete pet (and all related records)
+app.delete('/api/pets/:id', async (req, res) => {
     try {
-        const { name } = req.body;
-        const result = await getPool().request()
-            .input('id', sql.UniqueIdentifier, req.params.id)
-            .input('name', sql.NVarChar, name)
-            .query('UPDATE pets SET name = @name OUTPUT INSERTED.* WHERE id = @id');
-        res.json(result.recordset[0]);
+        const petId = req.params.id;
+        await getPool().request()
+            .input('petId', sql.UniqueIdentifier, petId)
+            .query('DELETE FROM achievements WHERE pet_id = @petId');
+        await getPool().request()
+            .input('petId', sql.UniqueIdentifier, petId)
+            .query('DELETE FROM expenses WHERE pet_id = @petId');
+        await getPool().request()
+            .input('petId', sql.UniqueIdentifier, petId)
+            .query('DELETE FROM savings_goals WHERE pet_id = @petId');
+        await getPool().request()
+            .input('petId', sql.UniqueIdentifier, petId)
+            .query('DELETE FROM pets WHERE id = @petId');
+        res.json({ success: true });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'Failed to rename pet' });
+        res.status(500).json({ error: 'Failed to delete pet' });
     }
 });
 
@@ -205,6 +422,19 @@ app.get('/api/tasks/:userId', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to fetch tasks' });
+    }
+});
+
+// Get completed task count
+app.get('/api/tasks/:userId/count', async (req, res) => {
+    try {
+        const result = await getPool().request()
+            .input('userId', sql.UniqueIdentifier, req.params.userId)
+            .query('SELECT COUNT(*) as count FROM tasks WHERE user_id = @userId AND completed = 1');
+        res.json({ count: result.recordset[0].count });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to count tasks' });
     }
 });
 
@@ -261,19 +491,6 @@ app.delete('/api/tasks/incomplete/:userId', async (req, res) => {
     }
 });
 
-// Get task count (completed) for user (NEW)
-app.get('/api/tasks/:userId/count', async (req, res) => {
-    try {
-        const result = await getPool().request()
-            .input('userId', sql.UniqueIdentifier, req.params.userId)
-            .query('SELECT COUNT(*) as count FROM tasks WHERE user_id = @userId AND completed = 1');
-        res.json({ count: result.recordset[0].count });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to count tasks' });
-    }
-});
-
 // ==================== FINANCES ENDPOINTS ====================
 
 // Get user finances
@@ -289,7 +506,7 @@ app.get('/api/finances/:userId', async (req, res) => {
     }
 });
 
-// Create user finances (NEW)
+// Create user finances
 app.post('/api/finances', async (req, res) => {
     try {
         const { user_id, balance, total_earned, total_spent } = req.body;
@@ -335,7 +552,7 @@ app.patch('/api/finances/:userId', async (req, res) => {
     }
 });
 
-// ==================== EXPENSES ENDPOINTS (NEW) ====================
+// ==================== EXPENSES ENDPOINTS ====================
 
 // Get expenses for a user and pet
 app.get('/api/expenses/:userId/:petId', async (req, res) => {
@@ -344,19 +561,6 @@ app.get('/api/expenses/:userId/:petId', async (req, res) => {
             .input('userId', sql.UniqueIdentifier, req.params.userId)
             .input('petId', sql.UniqueIdentifier, req.params.petId)
             .query('SELECT * FROM expenses WHERE user_id = @userId AND pet_id = @petId ORDER BY created_at DESC');
-        res.json(result.recordset);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to fetch expenses' });
-    }
-});
-
-// Get all expenses for a pet
-app.get('/api/expenses/pet/:petId', async (req, res) => {
-    try {
-        const result = await getPool().request()
-            .input('petId', sql.UniqueIdentifier, req.params.petId)
-            .query('SELECT * FROM expenses WHERE pet_id = @petId ORDER BY created_at DESC');
         res.json(result.recordset);
     } catch (err) {
         console.error(err);
@@ -386,7 +590,7 @@ app.post('/api/expenses', async (req, res) => {
     }
 });
 
-// ==================== ACHIEVEMENTS ENDPOINTS (NEW) ====================
+// ==================== ACHIEVEMENTS ENDPOINTS ====================
 
 // Get achievements for a user
 app.get('/api/achievements/:userId', async (req, res) => {
@@ -401,22 +605,21 @@ app.get('/api/achievements/:userId', async (req, res) => {
     }
 });
 
-// Create an achievement
+// Create an achievement (with duplicate check)
 app.post('/api/achievements', async (req, res) => {
     try {
         const { user_id, pet_id, achievement_id } = req.body;
-        
-        // Check if already exists
+
         const existing = await getPool().request()
             .input('user_id', sql.UniqueIdentifier, user_id)
             .input('pet_id', sql.UniqueIdentifier, pet_id)
             .input('achievement_id', sql.NVarChar, achievement_id)
             .query('SELECT id FROM achievements WHERE user_id = @user_id AND pet_id = @pet_id AND achievement_id = @achievement_id');
-        
+
         if (existing.recordset.length > 0) {
-            return res.json(existing.recordset[0]); // Already exists
+            return res.json(existing.recordset[0]);
         }
-        
+
         const result = await getPool().request()
             .input('user_id', sql.UniqueIdentifier, user_id)
             .input('pet_id', sql.UniqueIdentifier, pet_id)
@@ -433,7 +636,7 @@ app.post('/api/achievements', async (req, res) => {
     }
 });
 
-// ==================== USER STREAKS ENDPOINTS (NEW) ====================
+// ==================== USER STREAKS ENDPOINTS ====================
 
 // Get user streak
 app.get('/api/user_streaks/:userId', async (req, res) => {
@@ -441,16 +644,12 @@ app.get('/api/user_streaks/:userId', async (req, res) => {
         const result = await getPool().request()
             .input('userId', sql.UniqueIdentifier, req.params.userId)
             .query('SELECT * FROM user_streaks WHERE user_id = @userId');
-        
+
         const streak = result.recordset[0];
-        if (streak && streak.login_dates) {
-            try {
-                streak.login_dates = JSON.parse(streak.login_dates);
-            } catch (e) {
-                streak.login_dates = [];
-            }
+        if (streak?.login_dates) {
+            try { streak.login_dates = JSON.parse(streak.login_dates); }
+            catch (e) { streak.login_dates = []; }
         }
-        
         res.json(streak || null);
     } catch (err) {
         console.error(err);
@@ -462,17 +661,14 @@ app.get('/api/user_streaks/:userId', async (req, res) => {
 app.post('/api/user_streaks', async (req, res) => {
     try {
         const { user_id, current_streak, last_login_date, login_dates } = req.body;
-        
-        // Check if exists
+        const loginDatesStr = JSON.stringify(login_dates || []);
+
         const existing = await getPool().request()
             .input('user_id', sql.UniqueIdentifier, user_id)
             .query('SELECT user_id FROM user_streaks WHERE user_id = @user_id');
-        
+
         let result;
-        const loginDatesStr = JSON.stringify(login_dates || []);
-        
         if (existing.recordset.length > 0) {
-            // Update
             result = await getPool().request()
                 .input('user_id', sql.UniqueIdentifier, user_id)
                 .input('current_streak', sql.Int, current_streak)
@@ -488,7 +684,6 @@ app.post('/api/user_streaks', async (req, res) => {
                     WHERE user_id = @user_id
                 `);
         } else {
-            // Insert
             result = await getPool().request()
                 .input('user_id', sql.UniqueIdentifier, user_id)
                 .input('current_streak', sql.Int, current_streak)
@@ -500,16 +695,12 @@ app.post('/api/user_streaks', async (req, res) => {
                     VALUES (@user_id, @current_streak, @last_login_date, @login_dates)
                 `);
         }
-        
+
         const returnData = result.recordset[0];
-        if (returnData && returnData.login_dates) {
-            try {
-                returnData.login_dates = JSON.parse(returnData.login_dates);
-            } catch (e) {
-                returnData.login_dates = [];
-            }
+        if (returnData?.login_dates) {
+            try { returnData.login_dates = JSON.parse(returnData.login_dates); }
+            catch (e) { returnData.login_dates = []; }
         }
-        
         res.json(returnData);
     } catch (err) {
         console.error(err);
@@ -517,7 +708,7 @@ app.post('/api/user_streaks', async (req, res) => {
     }
 });
 
-// ==================== SAVINGS GOALS ENDPOINTS (NEW) ====================
+// ==================== SAVINGS GOALS ENDPOINTS ====================
 
 // Get savings goal
 app.get('/api/savings/:userId/:petId', async (req, res) => {
@@ -574,106 +765,22 @@ app.patch('/api/savings/:userId/:petId', async (req, res) => {
     }
 });
 
-// ==================== PROFILES ENDPOINTS (NEW) ====================
+// ==================== LEADERBOARD ENDPOINTS ====================
 
-// Get profile
-app.get('/api/profiles/:userId', async (req, res) => {
-    try {
-        const result = await getPool().request()
-            .input('userId', sql.UniqueIdentifier, req.params.userId)
-            .query('SELECT * FROM profiles WHERE user_id = @userId');
-        res.json(result.recordset[0] || null);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to fetch profile' });
-    }
-});
-
-// Create or update profile (upsert)
-app.post('/api/profiles', async (req, res) => {
-    try {
-        const { user_id, username, show_on_leaderboard } = req.body;
-        
-        // Check if exists
-        const existing = await getPool().request()
-            .input('user_id', sql.UniqueIdentifier, user_id)
-            .query('SELECT user_id FROM profiles WHERE user_id = @user_id');
-        
-        let result;
-        if (existing.recordset.length > 0) {
-            // Update
-            result = await getPool().request()
-                .input('user_id', sql.UniqueIdentifier, user_id)
-                .input('username', sql.NVarChar, username)
-                .input('show_on_leaderboard', sql.Bit, show_on_leaderboard !== false)
-                .query(`
-                    UPDATE profiles 
-                    SET username = @username,
-                        show_on_leaderboard = @show_on_leaderboard,
-                        updated_at = SYSDATETIMEOFFSET()
-                    OUTPUT INSERTED.*
-                    WHERE user_id = @user_id
-                `);
-        } else {
-            // Insert
-            result = await getPool().request()
-                .input('user_id', sql.UniqueIdentifier, user_id)
-                .input('username', sql.NVarChar, username)
-                .input('show_on_leaderboard', sql.Bit, show_on_leaderboard !== false)
-                .query(`
-                    INSERT INTO profiles (user_id, username, show_on_leaderboard)
-                    OUTPUT INSERTED.*
-                    VALUES (@user_id, @username, @show_on_leaderboard)
-                `);
-        }
-        
-        res.json(result.recordset[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to create profile' });
-    }
-});
-
-// Update profile
-app.patch('/api/profiles/:userId', async (req, res) => {
-    try {
-        const { username, show_on_leaderboard } = req.body;
-        const result = await getPool().request()
-            .input('userId', sql.UniqueIdentifier, req.params.userId)
-            .input('username', sql.NVarChar, username)
-            .input('show_on_leaderboard', sql.Bit, show_on_leaderboard)
-            .query(`
-                UPDATE profiles 
-                SET username = @username,
-                    show_on_leaderboard = @show_on_leaderboard,
-                    updated_at = SYSDATETIMEOFFSET()
-                OUTPUT INSERTED.*
-                WHERE user_id = @userId
-            `);
-        res.json(result.recordset[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Failed to update profile' });
-    }
-});
-
-// ==================== LEADERBOARD ENDPOINTS (NEW) ====================
-
-// Get balance leaderboard
+// Balance leaderboard
 app.get('/api/leaderboard/balance', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 50;
         const result = await getPool().request()
             .input('limit', sql.Int, limit)
             .query(`
-                SELECT TOP (@limit) 
-                    f.user_id, 
-                    f.balance, 
-                    p.username,
-                    ISNULL(p.show_on_leaderboard, 1) as show_on_leaderboard
+                SELECT TOP (@limit)
+                    f.user_id,
+                    f.balance,
+                    u.username
                 FROM user_finances f
-                LEFT JOIN profiles p ON f.user_id = p.user_id
-                WHERE ISNULL(p.show_on_leaderboard, 1) = 1
+                LEFT JOIN auth.users u ON f.user_id = u.id
+                WHERE ISNULL(u.show_on_leaderboard, 1) = 1
                 ORDER BY f.balance DESC
             `);
         res.json(result.recordset);
@@ -683,7 +790,7 @@ app.get('/api/leaderboard/balance', async (req, res) => {
     }
 });
 
-// Get level leaderboard
+// Level leaderboard
 app.get('/api/leaderboard/level', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 50;
@@ -696,11 +803,11 @@ app.get('/api/leaderboard/level', async (req, res) => {
                     p.level,
                     p.xp,
                     p.owner_id,
-                    pr.username,
-                    ISNULL(p.show_on_leaderboard, 1) as show_on_leaderboard
+                    u.username
                 FROM pets p
-                LEFT JOIN profiles pr ON p.owner_id = pr.user_id
+                LEFT JOIN auth.users u ON p.owner_id = u.id
                 WHERE ISNULL(p.show_on_leaderboard, 1) = 1
+                    AND ISNULL(u.show_on_leaderboard, 1) = 1
                 ORDER BY p.level DESC, p.xp DESC
             `);
         res.json(result.recordset);
@@ -710,7 +817,7 @@ app.get('/api/leaderboard/level', async (req, res) => {
     }
 });
 
-// Get streak leaderboard
+// Streak leaderboard
 app.get('/api/leaderboard/streak', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 50;
@@ -720,11 +827,10 @@ app.get('/api/leaderboard/streak', async (req, res) => {
                 SELECT TOP (@limit)
                     s.user_id,
                     s.current_streak,
-                    p.username,
-                    ISNULL(p.show_on_leaderboard, 1) as show_on_leaderboard
+                    u.username
                 FROM user_streaks s
-                LEFT JOIN profiles p ON s.user_id = p.user_id
-                WHERE ISNULL(p.show_on_leaderboard, 1) = 1
+                LEFT JOIN auth.users u ON s.user_id = u.id
+                WHERE ISNULL(u.show_on_leaderboard, 1) = 1
                 ORDER BY s.current_streak DESC
             `);
         res.json(result.recordset);
@@ -733,234 +839,6 @@ app.get('/api/leaderboard/streak', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch streak leaderboard' });
     }
 });
-
-// Sign Up
-app.post('/api/auth/signup', async (req, res) => {
-    try {
-        const { email, password, username } = req.body;
-
-        // Validation
-        if (!email || !password || !username) {
-            return res.status(400).json({ error: 'Email, password, and username are required' });
-        }
-
-        if (password.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters' });
-        }
-
-        // Check if user already exists
-        const existingUser = await getPool().request()
-            .input('email', sql.NVarChar, email.toLowerCase())
-            .query('SELECT id FROM auth.users WHERE email = @email');
-
-        if (existingUser.recordset.length > 0) {
-            return res.status(400).json({ error: 'User with this email already exists' });
-        }
-
-        // Check if username is taken
-        const existingUsername = await getPool().request()
-            .input('username', sql.NVarChar, username)
-            .query('SELECT user_id FROM profiles WHERE username = @username');
-
-        if (existingUsername.recordset.length > 0) {
-            return res.status(400).json({ error: 'Username is already taken' });
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Create user in auth.users table
-        const userResult = await getPool().request()
-            .input('email', sql.NVarChar, email.toLowerCase())
-            .input('password', sql.NVarChar, hashedPassword)
-            .query(`
-                INSERT INTO auth.users (email, encrypted_password)
-                OUTPUT INSERTED.id, INSERTED.email, INSERTED.created_at
-                VALUES (@email, @password)
-            `);
-
-        const newUser = userResult.recordset[0];
-
-        // Create profile
-        await getPool().request()
-            .input('user_id', sql.UniqueIdentifier, newUser.id)
-            .input('username', sql.NVarChar, username)
-            .query(`
-                INSERT INTO profiles (user_id, username, show_on_leaderboard)
-                VALUES (@user_id, @username, 1)
-            `);
-
-        // Create user finances
-        await getPool().request()
-            .input('user_id', sql.UniqueIdentifier, newUser.id)
-            .query(`
-                INSERT INTO user_finances (user_id, balance, total_earned, total_spent)
-                VALUES (@user_id, 50, 50, 0)
-            `);
-
-        // Generate JWT token
-        const token = jwt.sign(
-            { id: newUser.id, email: newUser.email },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            user: {
-                id: newUser.id,
-                email: newUser.email,
-                username: username
-            },
-            token
-        });
-    } catch (err) {
-        console.error('Signup error:', err);
-        res.status(500).json({ error: 'Failed to create account' });
-    }
-});
-
-// Sign In
-app.post('/api/auth/signin', async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-
-        // Get user from database
-        const userResult = await getPool().request()
-            .input('email', sql.NVarChar, email.toLowerCase())
-            .query('SELECT id, email, encrypted_password FROM auth.users WHERE email = @email');
-
-        if (userResult.recordset.length === 0) {
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-
-        const user = userResult.recordset[0];
-
-        // Verify password
-        const passwordMatch = await bcrypt.compare(password, user.encrypted_password);
-
-        if (!passwordMatch) {
-            return res.status(401).json({ error: 'Invalid email or password' });
-        }
-
-        // Get profile
-        const profileResult = await getPool().request()
-            .input('user_id', sql.UniqueIdentifier, user.id)
-            .query('SELECT username FROM profiles WHERE user_id = @user_id');
-
-        const username = profileResult.recordset[0]?.username || null;
-
-        // Generate JWT token
-        const token = jwt.sign(
-            { id: user.id, email: user.email },
-            JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-
-        res.json({
-            user: {
-                id: user.id,
-                email: user.email,
-                username: username
-            },
-            token
-        });
-    } catch (err) {
-        console.error('Signin error:', err);
-        res.status(500).json({ error: 'Failed to sign in' });
-    }
-});
-
-// Get Current User (verify token and return user data)
-app.get('/api/auth/me', authenticateToken, async (req, res) => {
-    try {
-        const userResult = await getPool().request()
-            .input('userId', sql.UniqueIdentifier, req.user.id)
-            .query('SELECT id, email, created_at FROM auth.users WHERE id = @userId');
-
-        if (userResult.recordset.length === 0) {
-            return res.status(404).json({ error: 'User not found' });
-        }
-
-        const user = userResult.recordset[0];
-
-        // Get profile
-        const profileResult = await getPool().request()
-            .input('user_id', sql.UniqueIdentifier, user.id)
-            .query('SELECT username, show_on_leaderboard FROM profiles WHERE user_id = @user_id');
-
-        const profile = profileResult.recordset[0];
-
-        res.json({
-            id: user.id,
-            email: user.email,
-            username: profile?.username || null,
-            hasProfile: !!profile
-        });
-    } catch (err) {
-        console.error('Get user error:', err);
-        res.status(500).json({ error: 'Failed to get user' });
-    }
-});
-
-// Update Password
-app.patch('/api/auth/password', authenticateToken, async (req, res) => {
-    try {
-        const { newPassword } = req.body;
-
-        if (!newPassword || newPassword.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters' });
-        }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-        await getPool().request()
-            .input('userId', sql.UniqueIdentifier, req.user.id)
-            .input('password', sql.NVarChar, hashedPassword)
-            .query('UPDATE auth.users SET encrypted_password = @password WHERE id = @userId');
-
-        res.json({ message: 'Password updated successfully' });
-    } catch (err) {
-        console.error('Update password error:', err);
-        res.status(500).json({ error: 'Failed to update password' });
-    }
-});
-
-// Update Email
-app.patch('/api/auth/email', authenticateToken, async (req, res) => {
-    try {
-        const { newEmail } = req.body;
-
-        if (!newEmail) {
-            return res.status(400).json({ error: 'Email is required' });
-        }
-
-        // Check if email is already taken
-        const existing = await getPool().request()
-            .input('email', sql.NVarChar, newEmail.toLowerCase())
-            .query('SELECT id FROM auth.users WHERE email = @email');
-
-        if (existing.recordset.length > 0) {
-            return res.status(400).json({ error: 'Email is already taken' });
-        }
-
-        await getPool().request()
-            .input('userId', sql.UniqueIdentifier, req.user.id)
-            .input('email', sql.NVarChar, newEmail.toLowerCase())
-            .query('UPDATE auth.users SET email = @email, updated_at = SYSDATETIMEOFFSET() WHERE id = @userId');
-
-        res.json({ message: 'Email updated successfully' });
-    } catch (err) {
-        console.error('Update email error:', err);
-        res.status(500).json({ error: 'Failed to update email' });
-    }
-});
-
-// Export the middleware for use in other routes
-module.exports = { authenticateToken };
 
 // ==================== SERVER START ====================
 

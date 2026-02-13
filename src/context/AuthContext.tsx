@@ -95,6 +95,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log("Sign-in response status:", response.status);
+
       const data = await response.json();
 
       if (!response.ok) {

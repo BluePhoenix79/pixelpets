@@ -32,17 +32,47 @@ export default function Auth() {
     setMessage({ text: "", type: "" });
     setIsLoading(true);
 
-    const { error } = await signIn(loginEmail, loginPassword);
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL}/api/auth/signin`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword,
+        }),
+      },
+    );
 
-    if (error) {
-      setMessage({ text: error.message, type: "error" });
+    console.log("Login response status:", response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      setMessage({
+        text: errorData.error || "Login failed",
+        type: "error",
+      });
     } else {
+      const data = await response.json();
+      localStorage.setItem("pixelpets_token", data.token);
+      setMessage({
+        text: "Login successful! Redirecting...",
+        type: "success",
+      });
       navigate("/dashboard");
     }
     setIsLoading(false);
   };
 
   const handleSignup = async (e: FormEvent) => {
+    console.log("API URL:", import.meta.env.VITE_API_URL);
+    console.log("Sending:", {
+      email: signupEmail,
+      password: signupPassword,
+      username,
+    });
     e.preventDefault();
     setMessage({ text: "", type: "" });
 
@@ -60,18 +90,39 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, username);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/api/auth/signup`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: signupEmail,
+            password: signupPassword,
+            username: username,
+          }),
+        },
+      );
 
-    if (error) {
-      setMessage({ text: error.message, type: "error" });
-    } else {
-      setMessage({
-        text: "Account created! Logging you in...",
-        type: "success",
-      });
+      console.log("Signup response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Signup failed");
+      }
+
+      const data = await response.json();
+
+      // NOTE: You must save the token so the app knows you're logged in
+      localStorage.setItem("pixelpets_token", data.token);
+
+      setMessage({ text: "Account created! Redirecting...", type: "success" });
       navigate("/dashboard");
+    } catch (err: any) {
+      setMessage({ text: err.message, type: "error" });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (

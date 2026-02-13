@@ -39,14 +39,6 @@ export default function Settings() {
     useState<Difficulty>(getDifficulty());
   const [showOnLeaderboard, setShowOnLeaderboard] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      setUsername(user.user_metadata?.username || "");
-      loadPets();
-      loadLeaderboardPreference();
-    }
-  }, [user]);
-
   const loadLeaderboardPreference = async () => {
     if (!user) return;
     const data = await getProfile(user.id);
@@ -56,6 +48,28 @@ export default function Settings() {
   };
 
   const loadPets = async () => {
+    if (!user) return;
+    const data = await getProfile(user.id);
+    if (data) setPets(data);
+  };
+
+  useEffect(() => {
+    if (user) {
+      setUsername(user.user_metadata?.username || "");
+      loadPets();
+      loadLeaderboardPreference();
+    }
+  }, [user]);
+
+  const loadLeaderboardPreference2 = async () => {
+    if (!user) return;
+    const data = await getProfile(user.id);
+    if (data) {
+      setShowOnLeaderboard(data.show_on_leaderboard !== false);
+    }
+  };
+
+  const loadPets2 = async () => {
     if (!user) return;
     const data = await getProfile(user.id);
     if (data) setPets(data);
