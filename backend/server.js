@@ -120,14 +120,17 @@ app.post('/api/auth/signup', async (req, res) => {
             `);
 
         const newUser = userResult.recordset[0];
+        console.log('Created user:', newUser);
 
         // Create starting finances
-        await getPool().request()
-            .input('user_id', sql.UniqueIdentifier, newUser.id)
-            .query(`
-                INSERT INTO user_finances (user_id, balance, total_earned, total_spent)
-                VALUES (@user_id, 50, 50, 0)
-            `);
+        const financeResult = await getPool().request()
+    .input('user_id', sql.UniqueIdentifier, newUser.id)
+    .query(`
+        INSERT INTO user_finances (user_id, balance, total_earned, total_spent)
+        OUTPUT INSERTED.*
+        VALUES (@user_id, 50, 50, 0)
+    `);
+console.log('Created finances:', financeResult.recordset[0]);
 
         // Generate JWT
         const token = jwt.sign(

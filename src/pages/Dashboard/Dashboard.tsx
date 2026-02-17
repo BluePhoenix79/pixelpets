@@ -70,20 +70,6 @@ export default function Dashboard() {
 
     if (petsData) {
       setPets(petsData);
-
-      // UX Improvement 1: Starter Money
-      // If user has 0 pets and less than $50, give them enough to start
-      if (petsData.length === 0 && (!financeData || financeData.balance < 50)) {
-        try {
-          await patchFinances(user.id, {
-            balance: 50,
-            total_earned: financeData?.total_earned || 0,
-          });
-          setBalance(50);
-        } catch (error) {
-          console.error("Failed to reset balance:", error);
-        }
-      }
     }
   };
 
